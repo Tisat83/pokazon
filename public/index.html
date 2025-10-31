@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>OKO · Помощь на странице (демо)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:0;padding:40px;background:#0b0f14;color:#f1f5f9}
+    .wrap{max-width:900px;margin:0 auto}
+    h1{margin:0 0 10px;font-size:28px}
+    p.lead{margin:0 0 24px;color:#94a3b8}
+    .row{display:flex;gap:12px;flex-wrap:wrap;margin:18px 0}
+    a.btn{display:inline-block;padding:12px 16px;border-radius:10px;background:#111827;color:#fff;text-decoration:none;border:1px solid #1f2937}
+    a.btn:hover{background:#0f172a}
+    small{color:#94a3b8}
+    .card{padding:16px;border:1px solid #1f2937;border-radius:14px;background:#0b1220}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>OKO · Помощь на странице</h1>
+    <p class="lead">Мини-демо. Откройте как клиент или как оператор на двух вкладках/устройствах.</p>
+
+    <div class="card">
+      <div class="row">
+        <a class="btn" href="/#help"   target="_blank">Открыть как клиент (#help)</a>
+        <a class="btn" href="/#operator" target="_blank">Открыть панель оператора (#operator)</a>
+      </div>
+      <small>Подключение и управление происходят прямо на этой странице.</small>
+    </div>
+  </div>
+
+  <!-- DEV-режим: берём исходники из /public/src -->
+  <script defer src="/src/oko-loader.js?mode=dev"></script>
+</body>
+</html>
