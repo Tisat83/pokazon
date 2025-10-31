@@ -4,13 +4,11 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>mini client</title>
-  <style>html,body{height:100%}body{margin:0;font:14px system-ui,Segoe UI,Roboto,Arial,sans-serif}</style>
   <script>
-    // ВАЖНО: устанавливаем #help ДО загрузки лоадера
+    window.POKAZON_EMBED = true;
     if (location.hash !== '#help') { location.replace(location.pathname + '#help'); }
   </script>
-  <script defer src="/src/oko-loader.js?mode=dev"></script>
+  <script defer src="/src/oko-loader.js?v=embed1"></script>
 </head>
-<body>
-</body>
+<body></body>
 </html>
