@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Pokazon · Демо (оператор ↔ клиент)</title>
+  <link rel="stylesheet" href="/assets/landing.css">
+</head>
+<body>
+  <div class="wrap">
+    <span class="badge">Pokazon · demo</span>
+    <h1>Интерактивное демо</h1>
+    <p class="lead">Слева — окно оператора, справа — окно клиента. Повторите шаги ниже, чтобы увидеть управление в действии.</p>
+
+    <div class="card" style="margin-bottom:12px">
+      <ol style="margin:0 0 10px 18px">
+        <li>В правом окне нажмите <b>«Подключить»</b> — появится код.</li>
+        <li>Нажмите на код, чтобы скопировать его.</li>
+        <li>В левом окне вставьте код в поле и нажмите <b>«Войти»</b>.</li>
+      </ol>
+      <small>Далее двигайте мышь в левом окне (оператор) и наблюдайте действия в правом (клиент). Управление ограничено только этой страницей.</small>
+    </div>
+
+    <div class="demo">
+      <div class="pane">
+        <h3>Окно оператора</h3>
+        <iframe src="/#operator" title="operator"></iframe>
+        <div class="note">Если панель закрыта — откройте её комбинацией <span class="kbd">Ctrl</span>+<span class="kbd">Alt</span>+<span class="kbd">O</span>.</div>
+      </div>
+      <div class="pane">
+        <h3>Окно клиента</h3>
+        <iframe src="/#help" title="client"></iframe>
+        <div class="note">Нажмите «Подключить» для получения кода. Код можно кликнуть — он скопируется.</div>
+      </div>
+    </div>
+
+    <div class="footer">
+      Для реального теста на двух устройствах откройте отдельно: клиент — <code>/#help</code>, оператор — <code>/#operator</code>.
+    </div>
+  </div>
+</body>
+</html>

@@ -3,53 +3,26 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Pokazon · Помощь на странице (демо)</title>
-  <link rel="stylesheet" href="assets/landing.css">
+  <title>Pokazon · Помощь на странице</title>
+  <link rel="stylesheet" href="/assets/landing.css">
 </head>
 <body>
   <div class="wrap">
     <span class="badge">Pokazon · co-browsing</span>
-    <h1>Pokazon · Помощь на странице (демо)</h1>
-    <p class="lead">Подключайтесь к клиенту по коду, управляйте сайтом вместе: курсор, клик, ввод, скролл.</p>
+    <h1>Помощь на странице для интернет‑магазинов</h1>
+    <p class="lead">Сотрудник управляет сайтом вместе с клиентом: указывает курсором, кликает, вводит текст и синхронно прокручивает. Без демонстрации полного экрана, только в пределах текущей страницы.</p>
 
     <div class="card">
-      <h2>Быстрый старт</h2>
+      <p><b>Как это выглядит?</b> Откройте демо с двумя окнами (оператор ↔ клиент) и повторите шаги подключения по коду.</p>
       <div class="row">
-        <a class="btn" href="/#help" target="_blank">Открыть как клиент</a>
-        <a class="btn" href="/#operator" target="_blank">Панель оператора</a>
+        <a class="btn" href="/demo/">Открыть демо</a>
       </div>
-      <small>Навигация по хэштегу: #help — клиент, #operator — оператор.</small>
-    </div>
-
-    <div class="grid" style="margin-top:14px">
-      <div class="card">
-        <h2>Функции</h2>
-        <ul>
-          <li>Код‑сессия и безопасное подключение;</li>
-          <li>Курсор оператора, клики, ввод, фокус, скролл;</li>
-          <li>Синхронная прокрутка; PgUp/PgDn/Top/Bottom;</li>
-          <li>Окно W×H и автоподгон масштаба;</li>
-          <li>Кнопка «Остановить» у клиента.</li>
-        </ul>
-      </div>
-      <div class="card">
-        <h2>Безопасность</h2>
-        <p>Оператор управляет только текущей страницей, полный экран клиента не транслируется. Код одноразовый.</p>
-        <p>Поддерживаются Origin‑allowlist и HMAC‑/boot (настройка на сервере).</p>
-      </div>
-      <div class="card">
-        <h2>Интеграция</h2>
-        <p>Dev‑подключение:</p>
-<pre class="card"><code>&lt;script defer src="/src/oko-loader.js?mode=dev"&gt;&lt;/script&gt;</code></pre>
-        <p>Для прода используйте CDN‑версии *.min.obf.js.</p>
-      </div>
+      <small>На демо плавающих кнопок нет по умолчанию — панели открываются встраиваемыми окнами.</small>
     </div>
 
     <div class="footer">
-      Свернуть/развернуть панель оператора — <span class="kbd">Ctrl</span>+<span class="kbd">Alt</span>+<span class="kbd">O</span>.
+      Свернуть/развернуть панель оператора — <span class="kbd">Ctrl</span>+<span class="kbd">Alt</span>+<span class="kbd">O</span>. Бренд: Pokazon.
     </div>
   </div>
-
-  <script defer src="/src/oko-loader.js?mode=dev"></script>
 </body>
 </html>
