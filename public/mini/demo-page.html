@@ -7,22 +7,50 @@
   <style>
     html,body{height:100%}
     body{margin:0;background:#0b1220 url('/assets/hero.jpg') center/cover no-repeat fixed}
-    body[data-role="client"] .oko-operator-fab{display:none !important}
-    body[data-role="operator"] .oko-panel [data-oko="below-code"],
-    body[data-role="operator"] .oko-panel .oko-controls,
-    body[data-role="operator"] .oko-panel .oko-nav,
-    body[data-role="operator"] .oko-panel .oko-footer,
-    body[data-role="operator"] .oko-panel .oko-scroll,
-    body[data-role="operator"] .oko-panel .oko-extra {display:none !important}
+    body[data-role="client"] .oko-operator-fab,
+    body[data-role="client"] .oko-operator-btn,
+    body[data-role="client"] .oko-opener { display:none !important; }
+    body[data-role="operator"] .oko-panel *{ display:none !important; }
+    body[data-role="operator"] .oko-panel,
+    body[data-role="operator"] .oko-panel .oko-head,
+    body[data-role="operator"] .oko-panel input[type="text"],
+    body[data-role="operator"] .oko-panel button,
+    body[data-role="operator"] .oko-panel .oko-log,
+    body[data-role="operator"] .oko-panel .oko-log *{ display:revert !important; }
+    body[data-role="operator"] .oko-panel{ width: 360px !important; }
+    body[data-role="operator"] .oko-panel input[type="text"]{ width: 220px !important; }
   </style>
   <script>
     window.POKAZON_EMBED = true;
-    if (!location.hash) { location.hash = '#help'; }
-    function markRole(){
-      var role = (location.hash.toLowerCase()==='#operator') ? 'operator' : 'client';
-      document.body.setAttribute('data-role', role);
+    function currentRole(){ return (location.hash.toLowerCase()==='#operator') ? 'operator' : 'client'; }
+    function applyRole(){ document.body.setAttribute('data-role', currentRole()); }
+    if(!location.hash){ location.hash = '#help'; }
+    window.addEventListener('hashchange', applyRole);
+    document.addEventListener('DOMContentLoaded', applyRole);
+
+    function simplifyOperatorPanel(){
+      if(currentRole()!=='operator') return;
+      var panel = document.querySelector('.oko-panel');
+      if(!panel) return;
+      var inputs = panel.querySelectorAll('input[type="text"], input');
+      var joinRow = null, joinBtn = null;
+      inputs.forEach(function(inp){
+        var b = inp.parentElement && inp.parentElement.querySelector('button');
+        if(!joinRow && b && /войти/i.test((b.textContent||''))){ joinRow = inp.parentElement; joinBtn = b; }
+      });
+      var log = panel.querySelector('.oko-log, [data-oko-log]');
+      Array.from(panel.children).forEach(function(ch){
+        if(ch===joinRow || ch===log) return; ch.style.display='none';
+      });
+      if(joinRow){ joinRow.style.display=''; }
+      if(joinBtn){ joinBtn.style.display=''; }
+      if(log){ log.style.display=''; }
     }
-    markRole(); window.addEventListener('hashchange', markRole);
+    var mo = new MutationObserver(function(){ simplifyOperatorPanel(); });
+    document.addEventListener('DOMContentLoaded', function(){
+      mo.observe(document.body, {subtree:true, childList:true});
+      simplifyOperatorPanel();
+    });
   </script>
   <script defer src="/src/oko-loader.js?mode=dev"></script>
 </head>
