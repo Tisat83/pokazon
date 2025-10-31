@@ -1,1 +1,8 @@
-node_modules/echo public/dist/echo .envecho *.logecho .DS_Storeecho Thumbs.db
+node_modules/
+public/dist/
+public/mirror/
+*.log
+.env
+server/hmac/index.hmac.js
+Thumbs.db
+.DS_Store
