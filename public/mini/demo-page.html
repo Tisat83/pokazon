@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Pokazon mini</title>
+  <style>
+    html,body{height:100%}
+    body{margin:0;background:#0b1220 url('/assets/hero.jpg') center/cover no-repeat fixed}
+    body[data-role="client"] .oko-operator-fab{display:none !important}
+    body[data-role="operator"] .oko-panel [data-oko="below-code"],
+    body[data-role="operator"] .oko-panel .oko-controls,
+    body[data-role="operator"] .oko-panel .oko-nav,
+    body[data-role="operator"] .oko-panel .oko-footer,
+    body[data-role="operator"] .oko-panel .oko-scroll,
+    body[data-role="operator"] .oko-panel .oko-extra {display:none !important}
+  </style>
+  <script>
+    window.POKAZON_EMBED = true;
+    if (!location.hash) { location.hash = '#help'; }
+    function markRole(){
+      var role = (location.hash.toLowerCase()==='#operator') ? 'operator' : 'client';
+      document.body.setAttribute('data-role', role);
+    }
+    markRole(); window.addEventListener('hashchange', markRole);
+  </script>
+  <script defer src="/src/oko-loader.js?mode=dev"></script>
+</head>
+<body></body>
+</html>
