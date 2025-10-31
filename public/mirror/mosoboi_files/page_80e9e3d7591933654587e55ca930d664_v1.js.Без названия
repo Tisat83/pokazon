@@ -1,0 +1,2645 @@
+
+; /* Start:"a:4:{s:4:"full";s:114:"/bitrix/templates/mosoboi_ad/components/uniofweb/bitrix.catalog.smart.filter/lepnina_new/script.js?176130457476542";s:6:"source";s:98:"/bitrix/templates/mosoboi_ad/components/uniofweb/bitrix.catalog.smart.filter/lepnina_new/script.js";s:3:"min";s:0:"";s:3:"map";s:0:"";}"*/
+var resultAjaxRequest = "";
+var from_delete_selected_prop = false;
+
+console.log('test filter');
+
+function JCSmartFilter(ajaxURL, viewMode, params) {
+    this.ajaxURL = ajaxURL;
+    this.form = null;
+    this.timer = null;
+    this.cacheKey = '';
+    this.cache = [];
+    this.popups = [];
+    this.viewMode = viewMode;
+    if (params && params.SEF_SET_FILTER_URL) {
+        this.bindUrlToButton('set_filter', params.SEF_SET_FILTER_URL);
+        this.sef = true;
+    }
+    if (params && params.SEF_DEL_FILTER_URL) {
+        this.bindUrlToButton('del_filter', params.SEF_DEL_FILTER_URL);
+    }
+}
+
+JCSmartFilter.prototype.keyup = function (input) {
+    if (!!this.timer) {
+        clearTimeout(this.timer);
+    }
+    this.timer = setTimeout(BX.delegate(function () {
+        this.reload(input);
+    }, this), 2000);
+};
+
+JCSmartFilter.prototype.click = function (checkbox) {
+    var parent_block = $(checkbox).parent().parent();
+    if (!parent_block.hasClass('checkbox'))
+        parent_block = $(checkbox).parent();
+    if (parent_block.hasClass("disabled-item")) {
+        $(checkbox).prop("checked", false);
+        return false;
+    }
+    if($(window).width()<500){
+        $('.fixed-filter-short-popup').show();
+    }
+
+    if (!!this.timer) {
+        clearTimeout(this.timer);
+    }
+
+
+    this.timer = setTimeout(BX.delegate(function () {
+        this.reload(checkbox);
+    }, this), 500);
+
+
+    $(checkbox).parent().toggleClass("label-checked-value");
+};
+
+JCSmartFilter.prototype.reload = function (input) {
+    $('.fixed-filter-short-popup').show();
+    if (window.adminTest !== 1) {
+        $(".js-page-preloader").show();
+    } else {
+        var filter_popup = {};
+        if ($(input).is(':visible'))
+            filter_popup.top = $(input).offset().top;
+        else
+            filter_popup.top = $(input).closest(':visible').offset().top;
+
+        /*лучше выглядит*/
+        filter_popup.top = filter_popup.top - 5;
+        /*END:лучше выглядит*/
+
+        // $('.filter-short-popup').show().offset({'top': filter_popup.top});
+        // $('.filter-short-popup span').text('').addClass('loading');
+        // $('.fixed-filter-short-popup span').text('').addClass('loading');
+
+        if ($(input).parents('form').find('input[type=checkbox]:checked').length > 0 || ($(input).attr('type') == 'text' && $(input).val() != '')) {
+            $('.filter-short-popup').show().offset({'top': filter_popup.top});
+            $('.filter-short-popup span').text('').addClass('loading');
+            $('.fixed-filter-short-popup span').text('').addClass('loading');
+        } else {
+//            $(".js-page-preloader").show();
+        }
+    }
+    if (this.cacheKey !== '') {
+        //Postprone backend query
+        if (!!this.timer) {
+            clearTimeout(this.timer);
+        }
+        this.timer = setTimeout(BX.delegate(function () {
+            this.reload(input);
+        }, this), 1000);
+        return;
+    }
+    this.cacheKey = '|';
+
+    this.position = BX.pos(input, true);
+    this.form = BX.findParent(input, {'tag': 'form'});
+    if (this.form) {
+        var values = [];
+        values[0] = {name: 'ajax', value: 'y'};
+        this.gatherInputsValues(values, BX.findChildren(this.form, {'tag': new RegExp('^(input|select)$', 'i')}, true));
+
+        for (var i = 0; i < values.length; i++)
+            this.cacheKey += values[i].name + ':' + values[i].value + '|';
+
+        console.log('reload');
+
+        if (this.cache[this.cacheKey]) {
+            this.curFilterinput = input;
+            this.postHandler(this.cache[this.cacheKey], true);
+            smart_filter_make_url(this.form);
+        } else {
+            if (this.sef) {
+                var set_filter = BX('set_filter');
+                set_filter.disabled = true;
+            }
+
+            this.curFilterinput = input;
+
+            var newUrl = "/oboi/?set_filter=y";
+
+            if ($(".js-is-catalog").length > 0) {
+                var arr_uri = (window.location.pathname).replace(/^\/+|\/+$/g, '').split('/');
+                newUrl = '/' + arr_uri[0] + '/' + arr_uri[1] + "/?set_filter=y";
+            }
+
+            smart_filter_make_url(this.form);
+
+            if (newUrl)
+                this.ajaxURL = newUrl;
+
+            BX.ajax.loadJSON(
+                this.ajaxURL,
+                this.values2post(values),
+                BX.delegate(this.postHandler, this)
+            );
+        }
+    }
+};
+
+JCSmartFilter.prototype.updateItem = function (PID, arItem) {
+    if (arItem.PROPERTY_TYPE === 'N' || arItem.PRICE) {
+        var trackBar = window['trackBar' + PID];
+        if (!trackBar && arItem.ENCODED_ID)
+            trackBar = window['trackBar' + arItem.ENCODED_ID];
+
+        if (trackBar && arItem.VALUES) {
+            if (arItem.VALUES.MIN) {
+                if (arItem.VALUES.MIN.FILTERED_VALUE)
+                    trackBar.setMinFilteredValue(arItem.VALUES.MIN.FILTERED_VALUE);
+                else
+                    trackBar.setMinFilteredValue(arItem.VALUES.MIN.VALUE);
+            }
+
+            if (arItem.VALUES.MAX) {
+                if (arItem.VALUES.MAX.FILTERED_VALUE)
+                    trackBar.setMaxFilteredValue(arItem.VALUES.MAX.FILTERED_VALUE);
+                else
+                    trackBar.setMaxFilteredValue(arItem.VALUES.MAX.VALUE);
+            }
+        }
+    } else if (arItem.VALUES) {
+        for (var i in arItem.VALUES) {
+            if (arItem.VALUES.hasOwnProperty(i)) {
+                var value = arItem.VALUES[i];
+                var control = BX(value.CONTROL_ID);
+
+                if (!!control) {
+                    var label = document.querySelector('[data-role="label_' + value.CONTROL_ID + '"]');
+                    if (value.DISABLED) {
+                        if (label)
+                            BX.addClass(label, 'disabled');
+                        else
+                            BX.addClass(control.parentNode, 'disabled');
+                    } else {
+                        if (label)
+                            BX.removeClass(label, 'disabled');
+                        else
+                            BX.removeClass(control.parentNode, 'disabled');
+                    }
+
+                    if (value.hasOwnProperty('ELEMENT_COUNT')) {
+                        label = document.querySelector('[data-role="count_' + value.CONTROL_ID + '"]');
+                        if (label)
+                            label.innerHTML = value.ELEMENT_COUNT;
+                    }
+                }
+            }
+        }
+    }
+};
+
+JCSmartFilter.prototype.postHandler = function (result, fromCache) {
+    var hrefFILTER, url, curProp;
+    var modef = BX('modef');
+    var modef_num = BX('modef_num');
+
+    if (!!result && !!result.ITEMS) {
+        for (var popupId in this.popups) {
+            if (this.popups.hasOwnProperty(popupId)) {
+                this.popups[popupId].destroy();
+            }
+        }
+        this.popups = [];
+
+        // @to-do при фильтрации только по цене приходит неверное количество
+        // if ($('.count_products').length > 0) {
+        //     var count_products_html = $('.count_products').html();
+        //     var count_products_arr = count_products_html.split(' ');
+        //     $('.count_products').html(result.ELEMENT_COUNT + ' ' + count_products_arr[count_products_arr.length - 1]);
+        // }
+
+        if (!!modef && !!modef_num) {
+            modef_num.innerHTML = result.ELEMENT_COUNT;
+            hrefFILTER = BX.findChildren(modef, {tag: 'A'}, true);
+
+            if (result.FILTER_URL && hrefFILTER) {
+                hrefFILTER[0].href = BX.util.htmlspecialcharsback(result.FILTER_URL);
+            }
+
+            if (result.FILTER_AJAX_URL && result.COMPONENT_CONTAINER_ID) {
+                BX.unbindAll(hrefFILTER[0]);
+                BX.bind(hrefFILTER[0], 'click', function (e) {
+                    url = BX.util.htmlspecialcharsback(result.FILTER_AJAX_URL);
+                    BX.ajax.insertToNode(url, result.COMPONENT_CONTAINER_ID);
+                    return BX.PreventDefault(e);
+                });
+            }
+
+            if (result.INSTANT_RELOAD && result.COMPONENT_CONTAINER_ID) {
+                url = BX.util.htmlspecialcharsback(result.FILTER_AJAX_URL);
+                BX.ajax.insertToNode(url, result.COMPONENT_CONTAINER_ID);
+            } else {
+                if (modef.style.display === 'none') {
+                    modef.style.display = 'inline-block';
+                }
+
+
+                $.each(result.ITEMS, function (indexProps, arProps) {
+                    var code = arProps.CODE;
+                    if (code !== "WIDTH" && code !== "LENGTH") {
+                        $.each(arProps.VALUES, function (indexItems, arItems) {
+                            $('span[data-role="count_' + arItems.CONTROL_ID + '"]').text(arItems.ELEMENT_COUNT);
+
+                        	if($("#" + arItems.CONTROL_ID).prop("checked")==false){
+	                            if (Number(arItems.ELEMENT_COUNT) <= 0) {
+	                                $("#" + arItems.CONTROL_ID)
+	                                    .prop('disabled', true)
+	                                    .prop("checked", false)
+	                                    .parent()
+	                                    .addClass("disabled-item")
+	                                    .removeClass("label-checked-value")
+	                                    .parent()
+	                                    .addClass("disabled-item")
+	                                    .removeClass("label-checked-value");
+	                            } else {
+	                                $("#" + arItems.CONTROL_ID)
+	                                    .prop('disabled', false)
+	                                    .parent()
+	                                    .removeClass("disabled-item")
+	                                    .parent()
+	                                    .removeClass("disabled-item");
+	                            }
+                        	}
+                        });
+                    }
+                });
+
+                resultAjaxRequest = result.FILTER_FOR_ELEMENTS;
+                /*
+                                if($(".main-catalog-wrap.catalog-section-product").length > 0 || $(".js-is-novelties").length > 0 || $(".js-is-hits").length > 0) {
+                                    window.location.href = "/oboi/" + hrefFILTER[0].search;
+                                    return;
+                                }
+                */
+                if (typeof result.ITEMS.BASE.VALUES.MIN.HTML_VALUE != 'undefined') {
+                    var min_price = parseInt(result.ITEMS.BASE.VALUES.MIN.HTML_VALUE);
+                // } else if (typeof result.ITEMS.BASE.VALUES.MIN.FILTERED_VALUE != 'undefined') {
+                //     var min_price = parseInt(result.ITEMS.BASE.VALUES.MIN.FILTERED_VALUE);
+                } else if (typeof result.ITEMS.BASE.VALUES.MIN.VALUE != 'undefined') {
+                    var min_price = parseInt(result.ITEMS.BASE.VALUES.MIN.VALUE);
+                } else {
+                    var min_price = 0;
+                }
+                $('#catalogSectionSmartFilter_P1_MIN').val(min_price);
+
+                price_button_toggle(min_price);
+
+                if (window.adminTest !== 1) {
+                    $.ajax({
+                        url: "/ajax/view/catalog_ajax_oboi.php",
+                        type: "POST",
+                        data: {
+                            FILTER: result.FILTER_FOR_ELEMENTS,
+                            SECTION_CODE: $(".main-catalog-wrap.catalog-section-product").attr("data-section-code"),
+                            CUR_DIR: $('form.smartfilter').attr('action'),
+                            IS_LEPNINA: $(".js-catalog.main-catalog-wrapper").attr("data-is-lepnina")
+                        },
+                        success: function (data) {
+
+                            $(".js-wrap-catalog-items").html(data);
+                            $(".text-before-products-in-brands").hide();
+                            $(".js-page-preloader").hide();
+
+                            var selectedProps = "";
+                            $(".js-catalog .bx-filter input[type='checkbox']:checked").each(function (i, elem) {
+                                var valueField = $(this).parent().attr("data-title");
+                                var idField = $(this).attr("id");
+
+                                // значения для выбранных свойств
+                                if (typeof valueField == "undefined")
+                                    valueField = $(this).parent().siblings(".bx-filter-param-label").text();
+
+                                if ($(this).data('alt-name'))
+                                    valueField = $(this).data('alt-name');
+
+                                selectedProps =
+                                    selectedProps +
+                                    "<div class='item'><noindex>" + valueField + "<a href='' data-id='" +
+                                    idField +
+                                    "' class='js-delete-selected-prop'></a></noindex></div>";
+
+                                if (!$((this)).parent().hasClass('mean-width')) {
+                                    if (!$((this)).parent().hasClass("colors-item")) {
+                                        if ($(this).parent().parent().parent().hasClass("filter-secondary-list")) {
+                                            $(this).parent().parent().parent().parent().find(".filter-primary-list").prepend($(this).parent().parent());
+                                        } else {
+                                            $(this).parent().parent().parent().prepend($(this).parent().parent());
+                                        }
+                                    } else {
+                                        if ($(this).parent().parent().find(".first_color_block").length > 0) {
+                                            $(this).parent().parent().find(".first_color_block").after($(this).parent());
+                                        } else {
+                                            $(this).parent().parent().prepend($(this).parent());
+                                        }
+
+                                    }
+                                }
+
+                            });
+
+                            $(".js-selected-props").html(selectedProps);
+
+                            if ($('.popular-prices .price-item.active').length > 0) {
+                                $(".js-selected-props").append('<div class="item"><noindex>' + $('.popular-prices .price-item.active').text()
+                                    + '<a href="javascript:void(0);" class="js-delete-selected-prop popular-prices"></a></noindex></div>');
+                            }
+
+
+                            if ($(".main-catalog-wrap.catalog-section-product").length > 0 || $(".js-catalog.main-catalog-wrapper.lepnina").length > 0)
+                                $(".show_products_or_brands").remove();
+
+                            if ($('.count_products').length > 0) {
+                                if ($('.modern-page-navigation').length > 0) {
+                                    var total_element = $('.modern-page-navigation').data('record-count');
+                                } else {
+                                    var total_element = $('.product-item-small-card').length;
+                                }
+                                var count_label = declOfNum(total_element, ['товар', 'товара', 'товаров']);
+                                $('.count_products').html(total_element + ' ' + count_label);
+                            }
+                        },
+                        error: function (response) {
+                            console.log(response);
+                        }
+                    });
+                } else {
+                    this.result = result;
+                    $('.fixed-filter-short-popup').hide();
+
+//                    js-delete-selected-prop
+//                    js-clicked
+                		if(from_delete_selected_prop || $(window).width()<500){
+                          $('.fixed-filter-short-popup').show();
+                          from_delete_selected_prop=false;
+                		}
+//                	console.log(result.FILTER_URL);
+//                	console.log($('.filter-short-popup').is(':visible'));
+//					console.log($(this.curFilterinput).parents('form').find('input[type=checkbox]:checked').length);
+//                	console.log($(this.curFilterinput).val());
+                    // if (result.FILTER_URL == '/oboi/?set_filter=y' || result.FILTER_URL.indexOf('P1_MIN') != -1) {
+
+                    if (
+                        result.FILTER_URL == '/oboi/?set_filter=y' ||
+                        result.FILTER_URL == '/oboi/?set_filter=y&amp;catalogSectionSmartFilter_P1_MIN=0' ||
+                        !$('.filter-short-popup').is(':visible') ||
+                        ($(this.curFilterinput).parents('form').find('input[type=checkbox]:checked').length == 0 && $(this.curFilterinput).val() == '')
+                    ) {
+
+                        $('.filter-short-popup').hide();
+                        $('.fixed-filter-short-popup').hide();
+                        this.reloadCatalogList();
+                    } else {
+                        var filter_popup = {};
+                        filter_popup.elements_count = this.result.ELEMENT_COUNT;
+                        $('.filter-short-popup')
+                            .find('span')
+                            .text(filter_popup.elements_count)
+                            .removeClass('loading');
+                        $('.fixed-filter-short-popup')
+                            .find('span')
+                            .text(filter_popup.elements_count)
+                            .removeClass('loading');
+                        BX.bind(
+                            $('.filter-short-popup a')[0],
+                            'click',
+                            BX.delegate(function () {
+                                $('.filter-short-popup').hide();
+                                this.reloadCatalogList();
+                                BX.unbindAll($('.filter-short-popup a')[0]);
+                            }, this)
+                        );
+                        BX.bind(
+                            $('.fixed-filter-short-popup a')[0],
+                            'click',
+                            BX.delegate(function () {
+                                $('.filter-short-popup').hide();
+                                $('.fixed-filter-short-popup').hide();
+                                this.reloadCatalogList();
+                        	    if($(window).width()<500){
+                        	    	$('.bx-sidebar-block').removeClass('open');
+                        	    }
+                                BX.unbindAll($('.fixed-filter-short-popup a')[0]);
+                            }, this)
+                        );
+                        /*$('.filter-short-popup a').on('click', function () {
+                         $('.filter-short-popup').hide();
+                         JCSmartFilter.prototype.reloadCatalogList();
+                         });*/
+                    }
+                }
+
+                if (this.viewMode == "VERTICAL") {
+                    curProp = BX.findChild(BX.findParent(this.curFilterinput, {'class': 'bx-filter-parameters-box'}), {'class': 'bx-filter-container-modef'}, true, false);
+                    curProp.appendChild(modef);
+                }
+
+                if (result.SEF_SET_FILTER_URL) {
+                    this.bindUrlToButton('set_filter', result.SEF_SET_FILTER_URL);
+                }
+            }
+        }
+    }
+
+    if (this.sef) {
+        var set_filter = BX('set_filter');
+        set_filter.disabled = false;
+    }
+
+    if (!fromCache && this.cacheKey !== '') {
+        this.cache[this.cacheKey] = result;
+    }
+    this.cacheKey = '';
+};
+
+JCSmartFilter.prototype.bindUrlToButton = function (buttonId, url) {
+    var button = BX(buttonId);
+    if (button) {
+        var proxy = function (j, func) {
+            return function () {
+                return func(j);
+            }
+        };
+
+        if (button.type == 'submit')
+            button.type = 'button';
+
+        BX.bind(button, 'click', proxy(url, function (url) {
+            window.location.href = url;
+            return false;
+        }));
+    }
+};
+
+JCSmartFilter.prototype.gatherInputsValues = function (values, elements) {
+    if (elements) {
+        for (var i = 0; i < elements.length; i++) {
+            var el = elements[i];
+            if (el.disabled || !el.type)
+                continue;
+
+            switch (el.type.toLowerCase()) {
+                case 'text':
+                case 'textarea':
+                case 'password':
+                case 'hidden':
+                case 'select-one':
+                    if (el.value.length)
+                        values[values.length] = {name: el.name, value: el.value};
+                    break;
+                case 'radio':
+                case 'checkbox':
+                    if (el.checked)
+                        values[values.length] = {name: el.name, value: el.value};
+                    break;
+                case 'select-multiple':
+                    for (var j = 0; j < el.options.length; j++) {
+                        if (el.options[j].selected)
+                            values[values.length] = {name: el.name, value: el.options[j].value};
+                    }
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+};
+
+JCSmartFilter.prototype.values2post = function (values) {
+    var post = [];
+    var current = post;
+    var i = 0;
+
+    while (i < values.length) {
+        var p = values[i].name.indexOf('[');
+        if (p == -1) {
+            current[values[i].name] = values[i].value;
+            current = post;
+            i++;
+        } else {
+            var name = values[i].name.substring(0, p);
+            var rest = values[i].name.substring(p + 1);
+            if (!current[name])
+                current[name] = [];
+
+            var pp = rest.indexOf(']');
+            if (pp == -1) {
+                //Error - not balanced brackets
+                current = post;
+                i++;
+            } else if (pp == 0) {
+                //No index specified - so take the next integer
+                current = current[name];
+                values[i].name = '' + current.length;
+            } else {
+                //Now index name becomes and name and we go deeper into the array
+                current = current[name];
+                values[i].name = rest.substring(0, pp) + rest.substring(pp + 1);
+            }
+        }
+    }
+    return post;
+};
+
+JCSmartFilter.prototype.hideFilterProps = function (element) {
+    console.log(element.closest('.bx-filter-parameters-box'));
+
+    let propertyBox = element.closest('.bx-filter-parameters-box');
+    propertyBox.classList.toggle('_opened');
+
+    var obj = element.parentNode,
+        filterBlock = obj.querySelector("[data-role='bx_filter_block']"),
+        propAngle = obj.querySelector("[data-role='prop_angle']");
+
+    if (BX.hasClass(element, "bx-active")) {
+        BX.removeClass(element, "bx-active");
+        BX.addClass(element, "bx-not-active");
+        filterBlock.style.display = "none";
+
+        /*new BX.easing({
+            duration : 0,
+            start : { opacity: 1,  height: filterBlock.offsetHeight },
+            finish : { opacity: 0, height:0 },
+            transition : BX.easing.transitions.quart,
+            step : function(state){
+                filterBlock.style.opacity = state.opacity;
+                filterBlock.style.height = state.height + "px";
+            },
+            complete : function() {
+                filterBlock.setAttribute("style", "");
+                BX.removeClass(obj, "bx-active");
+            }
+        }).animate();
+
+        BX.addClass(obj, "bx-not-active");
+        BX.addClass(propAngle, "fa-angle-down");
+        BX.removeClass(propAngle, "fa-angle-up");*/
+    } else {
+        BX.addClass(element, "bx-active");
+        BX.removeClass(element, "bx-not-active");
+        filterBlock.style.display = "block";
+        /*filterBlock.style.display = "block";
+        filterBlock.style.opacity = 0;
+        filterBlock.style.height = "auto";
+
+        var obj_children_height = filterBlock.offsetHeight;
+        filterBlock.style.height = 0;
+
+        new BX.easing({
+            duration : 0,
+            start : { opacity: 0,  height: 0 },
+            finish : { opacity: 1, height: obj_children_height },
+            transition : BX.easing.transitions.quart,
+            step : function(state){
+                filterBlock.style.opacity = state.opacity;
+                filterBlock.style.height = state.height + "px";
+                BX.removeClass(obj, "bx-not-active");
+            },
+            complete : function() {
+            }
+        }).animate();
+
+        BX.addClass(obj, "bx-active");
+        BX.removeClass(propAngle, "fa-angle-down");
+        BX.addClass(propAngle, "fa-angle-up");*/
+    }
+    if ($(window).width() > 1000) {
+        $(".bx-sidebar-block").trigger("sticky_kit:recalc");
+    }
+};
+
+JCSmartFilter.prototype.showDropDownPopup = function (element, popupId) {
+    var contentNode = element.querySelector('[data-role="dropdownContent"]');
+    this.popups["smartFilterDropDown" + popupId] = BX.PopupWindowManager.create("smartFilterDropDown" + popupId, element, {
+        autoHide: true,
+        offsetLeft: 0,
+        offsetTop: 3,
+        overlay: false,
+        draggable: {restrict: true},
+        closeByEsc: true,
+        content: BX.clone(contentNode)
+    });
+    this.popups["smartFilterDropDown" + popupId].show();
+};
+
+JCSmartFilter.prototype.selectDropDownItem = function (element, controlId) {
+    this.keyup(BX(controlId));
+
+    var wrapContainer = BX.findParent(BX(controlId), {className: "bx-filter-select-container"}, false);
+
+    var currentOption = wrapContainer.querySelector('[data-role="currentOption"]');
+    currentOption.innerHTML = element.innerHTML;
+    BX.PopupWindowManager.getCurrentPopup().close();
+};
+
+JCSmartFilter.prototype.reloadCatalogList = function () {
+    $(".js-page-preloader").show();
+    $.ajax({
+        url: "/ajax/view/catalog_ajax_oboi.php",
+        type: "POST",
+        data: {
+            FILTER: this.result.FILTER_FOR_ELEMENTS,
+            SECTION_CODE: $(".main-catalog-wrap.catalog-section-product").attr("data-section-code"),
+            CUR_DIR: $('form.smartfilter').attr('action'),
+            IS_LEPNINA: $(".js-catalog.main-catalog-wrapper").attr("data-is-lepnina"),
+            CUR_PAGE: window.location.pathname
+        },
+        success: function (data) {
+
+            $(".js-wrap-catalog-items").html(data);
+            $(".text-before-products-in-brands").hide();
+            $(".js-page-preloader").hide();
+
+            if(compilation.editing)
+                compilation.addCatalogItemsCheckboxes();
+
+            var selectedProps = "";
+            $(".js-catalog .bx-filter input[type='checkbox']:checked").each(function (i, elem) {
+                var valueField = $(this).parent().attr("data-title");
+                var idField = $(this).attr("id");
+
+                // значения для выбранных свойств
+                if (typeof valueField == "undefined")
+                    valueField = $(this).parent().siblings(".bx-filter-param-label").text();
+
+                if ($(this).data('alt-name'))
+                    valueField = $(this).data('alt-name');
+
+                selectedProps =
+                    selectedProps +
+                    "<div class='item'><noindex>" + valueField + "<a href='' data-id='" +
+                    idField +
+                    "' class='js-delete-selected-prop'></a></noindex></div>";
+
+                if (!$((this)).parent().hasClass('mean-width')) {
+                    if (!$((this)).parent().hasClass("colors-item")) {
+                        if ($(this).parent().parent().parent().hasClass("filter-secondary-list")) {
+                            $(this).parent().parent().parent().parent().find(".filter-primary-list").prepend($(this).parent().parent());
+                        } else {
+                            $(this).parent().parent().parent().prepend($(this).parent().parent());
+                        }
+                    } else {
+                        if ($(this).parent().parent().find(".first_color_block").length > 0) {
+                            $(this).parent().parent().find(".first_color_block").after($(this).parent());
+                        } else {
+                            $(this).parent().parent().prepend($(this).parent());
+                        }
+
+                    }
+                }
+
+            });
+
+            $(".js-selected-props").html(selectedProps);
+
+            if ($('.popular-prices .price-item.active').length > 0) {
+                $(".js-selected-props").append('<div class="item"><noindex>' + $('.popular-prices .price-item.active').text()
+                    + '<a href="javascript:void(0);" class="js-delete-selected-prop popular-prices"></a></noindex></div>');
+            }
+
+
+            if ($(".main-catalog-wrap.catalog-section-product").length > 0 || $(".js-catalog.main-catalog-wrapper.lepnina").length > 0)
+                $(".show_products_or_brands").remove();
+
+            if ($('.count_products').length > 0) {
+                if ($('.modern-page-navigation').length > 0) {
+                    var total_element = $('.modern-page-navigation').data('record-count');
+                } else {
+                    var total_element = $('.product-item-small-card').length;
+
+                    if($('.product-item-small-line').length){
+                        total_element = $('.product-item-small-line').length;
+                    }
+                }
+                var count_label = declOfNum(total_element, ['товар', 'товара', 'товаров']);
+                $('.count_products').html(total_element + ' ' + count_label);
+            }
+
+            if (typeof catalogItemSliderInit === 'function') {
+                catalogItemSliderInit();
+            }
+        }
+    });
+}
+BX.namespace("BX.Iblock.SmartFilter");
+BX.Iblock.SmartFilter = (function () {
+    // console.log('BX.Iblock.SmartFilter');
+    /** @param {{
+			leftSlider: string,
+			rightSlider: string,
+			tracker: string,
+			trackerWrap: string,
+			minInputId: string,
+			maxInputId: string,
+			minPrice: float|int|string,
+			maxPrice: float|int|string,
+			curMinPrice: float|int|string,
+			curMaxPrice: float|int|string,
+			fltMinPrice: float|int|string|null,
+			fltMaxPrice: float|int|string|null,
+			precision: int|null,
+			colorUnavailableActive: string,
+			colorAvailableActive: string,
+			colorAvailableInactive: string
+		}} arParams
+     */
+    var SmartFilter = function (arParams) {
+        if (typeof arParams === 'object') {
+            this.leftSlider = BX(arParams.leftSlider);
+            this.rightSlider = BX(arParams.rightSlider);
+            this.tracker = BX(arParams.tracker);
+            this.trackerWrap = BX(arParams.trackerWrap);
+
+            this.minInput = BX(arParams.minInputId);
+            this.maxInput = BX(arParams.maxInputId);
+
+            this.minPrice = parseFloat(arParams.minPrice);
+            this.maxPrice = parseFloat(arParams.maxPrice);
+
+            this.curMinPrice = parseFloat(arParams.curMinPrice);
+            this.curMaxPrice = parseFloat(arParams.curMaxPrice);
+
+            this.fltMinPrice = arParams.fltMinPrice ? parseFloat(arParams.fltMinPrice) : parseFloat(arParams.curMinPrice);
+            this.fltMaxPrice = arParams.fltMaxPrice ? parseFloat(arParams.fltMaxPrice) : parseFloat(arParams.curMaxPrice);
+
+            this.precision = arParams.precision || 0;
+
+            this.priceDiff = this.maxPrice - this.minPrice;
+
+            this.leftPercent = 0;
+            this.rightPercent = 0;
+
+            this.fltMinPercent = 0;
+            this.fltMaxPercent = 0;
+
+            this.colorUnavailableActive = BX(arParams.colorUnavailableActive);//gray
+            this.colorAvailableActive = BX(arParams.colorAvailableActive);//blue
+            this.colorAvailableInactive = BX(arParams.colorAvailableInactive);//light blue
+
+            this.isTouch = false;
+
+            this.init();
+
+            if ('ontouchstart' in document.documentElement) {
+                this.isTouch = true;
+
+                BX.bind(this.leftSlider, "touchstart", BX.proxy(function (event) {
+                    this.onMoveLeftSlider(event)
+                }, this));
+
+                BX.bind(this.rightSlider, "touchstart", BX.proxy(function (event) {
+                    this.onMoveRightSlider(event)
+                }, this));
+            } else {
+                BX.bind(this.leftSlider, "mousedown", BX.proxy(function (event) {
+                    this.onMoveLeftSlider(event)
+                }, this));
+
+                BX.bind(this.rightSlider, "mousedown", BX.proxy(function (event) {
+                    this.onMoveRightSlider(event)
+                }, this));
+            }
+
+            BX.bind(this.minInput, "keyup", BX.proxy(function (event) {
+                this.onInputChange();
+            }, this));
+
+            BX.bind(this.maxInput, "keyup", BX.proxy(function (event) {
+                this.onInputChange();
+            }, this));
+        }
+    };
+
+    SmartFilter.prototype.init = function () {
+        var priceDiff;
+
+        if (this.curMinPrice > this.minPrice) {
+            priceDiff = this.curMinPrice - this.minPrice;
+            this.leftPercent = (priceDiff * 100) / this.priceDiff;
+
+            this.leftSlider.style.left = this.leftPercent + "%";
+            this.colorUnavailableActive.style.left = this.leftPercent + "%";
+        }
+
+        this.setMinFilteredValue(this.fltMinPrice);
+
+        if (this.curMaxPrice < this.maxPrice) {
+            priceDiff = this.maxPrice - this.curMaxPrice;
+            this.rightPercent = (priceDiff * 100) / this.priceDiff;
+
+            this.rightSlider.style.right = this.rightPercent + "%";
+            this.colorUnavailableActive.style.right = this.rightPercent + "%";
+        }
+
+        this.setMaxFilteredValue(this.fltMaxPrice);
+    };
+
+    SmartFilter.prototype.setMinFilteredValue = function (fltMinPrice) {
+        this.fltMinPrice = parseFloat(fltMinPrice);
+        if (this.fltMinPrice >= this.minPrice) {
+            var priceDiff = this.fltMinPrice - this.minPrice;
+            this.fltMinPercent = (priceDiff * 100) / this.priceDiff;
+
+            if (this.leftPercent > this.fltMinPercent)
+                this.colorAvailableActive.style.left = this.leftPercent + "%";
+            else
+                this.colorAvailableActive.style.left = this.fltMinPercent + "%";
+
+            this.colorAvailableInactive.style.left = this.fltMinPercent + "%";
+        } else {
+            this.colorAvailableActive.style.left = "0%";
+            this.colorAvailableInactive.style.left = "0%";
+        }
+    };
+
+    SmartFilter.prototype.setMaxFilteredValue = function (fltMaxPrice) {
+        this.fltMaxPrice = parseFloat(fltMaxPrice);
+        if (this.fltMaxPrice <= this.maxPrice) {
+            var priceDiff = this.maxPrice - this.fltMaxPrice;
+            this.fltMaxPercent = (priceDiff * 100) / this.priceDiff;
+
+            if (this.rightPercent > this.fltMaxPercent)
+                this.colorAvailableActive.style.right = this.rightPercent + "%";
+            else
+                this.colorAvailableActive.style.right = this.fltMaxPercent + "%";
+
+            this.colorAvailableInactive.style.right = this.fltMaxPercent + "%";
+        } else {
+            this.colorAvailableActive.style.right = "0%";
+            this.colorAvailableInactive.style.right = "0%";
+        }
+    };
+
+    SmartFilter.prototype.getXCoord = function (elem) {
+        var box = elem.getBoundingClientRect();
+        var body = document.body;
+        var docElem = document.documentElement;
+
+        var scrollLeft = window.pageXOffset || docElem.scrollLeft || body.scrollLeft;
+        var clientLeft = docElem.clientLeft || body.clientLeft || 0;
+        var left = box.left + scrollLeft - clientLeft;
+
+        return Math.round(left);
+    };
+
+    SmartFilter.prototype.getPageX = function (e) {
+        e = e || window.event;
+        var pageX = null;
+
+        if (this.isTouch && event.targetTouches[0] != null) {
+            pageX = e.targetTouches[0].pageX;
+        } else if (e.pageX != null) {
+            pageX = e.pageX;
+        } else if (e.clientX != null) {
+            var html = document.documentElement;
+            var body = document.body;
+
+            pageX = e.clientX + (html.scrollLeft || body && body.scrollLeft || 0);
+            pageX -= html.clientLeft || 0;
+        }
+
+        return pageX;
+    };
+
+    SmartFilter.prototype.recountMinPrice = function () {
+        var newMinPrice = (this.priceDiff * this.leftPercent) / 100;
+        newMinPrice = (this.minPrice + newMinPrice).toFixed(this.precision);
+
+        if (newMinPrice != this.minPrice)
+            this.minInput.value = newMinPrice;
+        else
+            this.minInput.value = "";
+        /** @global JCSmartFilter smartFilter */
+        smartFilter.keyup(this.minInput);
+    };
+
+    SmartFilter.prototype.recountMaxPrice = function () {
+        var newMaxPrice = (this.priceDiff * this.rightPercent) / 100;
+        newMaxPrice = (this.maxPrice - newMaxPrice).toFixed(this.precision);
+
+        if (newMaxPrice != this.maxPrice)
+            this.maxInput.value = newMaxPrice;
+        else
+            this.maxInput.value = "";
+        /** @global JCSmartFilter smartFilter */
+        smartFilter.keyup(this.maxInput);
+    };
+
+    SmartFilter.prototype.onInputChange = function () {
+        var priceDiff;
+        if (this.minInput.value) {
+            var leftInputValue = this.minInput.value;
+            if (leftInputValue < this.minPrice)
+                leftInputValue = this.minPrice;
+
+            if (leftInputValue > this.maxPrice)
+                leftInputValue = this.maxPrice;
+
+            priceDiff = leftInputValue - this.minPrice;
+            this.leftPercent = (priceDiff * 100) / this.priceDiff;
+
+            this.makeLeftSliderMove(false);
+        }
+
+        if (this.maxInput.value) {
+            var rightInputValue = this.maxInput.value;
+            if (rightInputValue < this.minPrice)
+                rightInputValue = this.minPrice;
+
+            if (rightInputValue > this.maxPrice)
+                rightInputValue = this.maxPrice;
+
+            priceDiff = this.maxPrice - rightInputValue;
+            this.rightPercent = (priceDiff * 100) / this.priceDiff;
+
+            this.makeRightSliderMove(false);
+        }
+    };
+
+    SmartFilter.prototype.makeLeftSliderMove = function (recountPrice) {
+        recountPrice = (recountPrice !== false);
+
+        this.leftSlider.style.left = this.leftPercent + "%";
+        this.colorUnavailableActive.style.left = this.leftPercent + "%";
+
+        var areBothSlidersMoving = false;
+        if (this.leftPercent + this.rightPercent >= 100) {
+            areBothSlidersMoving = true;
+            this.rightPercent = 100 - this.leftPercent;
+            this.rightSlider.style.right = this.rightPercent + "%";
+            this.colorUnavailableActive.style.right = this.rightPercent + "%";
+        }
+
+        if (this.leftPercent >= this.fltMinPercent && this.leftPercent <= (100 - this.fltMaxPercent)) {
+            this.colorAvailableActive.style.left = this.leftPercent + "%";
+            if (areBothSlidersMoving) {
+                this.colorAvailableActive.style.right = 100 - this.leftPercent + "%";
+            }
+        } else if (this.leftPercent <= this.fltMinPercent) {
+            this.colorAvailableActive.style.left = this.fltMinPercent + "%";
+            if (areBothSlidersMoving) {
+                this.colorAvailableActive.style.right = 100 - this.fltMinPercent + "%";
+            }
+        } else if (this.leftPercent >= this.fltMaxPercent) {
+            this.colorAvailableActive.style.left = 100 - this.fltMaxPercent + "%";
+            if (areBothSlidersMoving) {
+                this.colorAvailableActive.style.right = this.fltMaxPercent + "%";
+            }
+        }
+
+        if (recountPrice) {
+            this.recountMinPrice();
+            if (areBothSlidersMoving)
+                this.recountMaxPrice();
+        }
+    };
+
+    SmartFilter.prototype.countNewLeft = function (event) {
+        var pageX = this.getPageX(event);
+
+        var trackerXCoord = this.getXCoord(this.trackerWrap);
+        var rightEdge = this.trackerWrap.offsetWidth;
+
+        var newLeft = pageX - trackerXCoord;
+
+        if (newLeft < 0)
+            newLeft = 0;
+        else if (newLeft > rightEdge)
+            newLeft = rightEdge;
+
+        return newLeft;
+    };
+
+    SmartFilter.prototype.onMoveLeftSlider = function (e) {
+        if (!this.isTouch) {
+            this.leftSlider.ondragstart = function () {
+                return false;
+            };
+        }
+
+        if (!this.isTouch) {
+            document.onmousemove = BX.proxy(function (event) {
+                this.leftPercent = ((this.countNewLeft(event) * 100) / this.trackerWrap.offsetWidth);
+                this.makeLeftSliderMove();
+            }, this);
+
+            document.onmouseup = function () {
+                document.onmousemove = document.onmouseup = null;
+            };
+        } else {
+            document.ontouchmove = BX.proxy(function (event) {
+                this.leftPercent = ((this.countNewLeft(event) * 100) / this.trackerWrap.offsetWidth);
+                this.makeLeftSliderMove();
+            }, this);
+
+            document.ontouchend = function () {
+                document.ontouchmove = document.touchend = null;
+            };
+        }
+
+        return false;
+    };
+
+    SmartFilter.prototype.makeRightSliderMove = function (recountPrice) {
+        recountPrice = (recountPrice !== false);
+
+        this.rightSlider.style.right = this.rightPercent + "%";
+        this.colorUnavailableActive.style.right = this.rightPercent + "%";
+
+        var areBothSlidersMoving = false;
+        if (this.leftPercent + this.rightPercent >= 100) {
+            areBothSlidersMoving = true;
+            this.leftPercent = 100 - this.rightPercent;
+            this.leftSlider.style.left = this.leftPercent + "%";
+            this.colorUnavailableActive.style.left = this.leftPercent + "%";
+        }
+
+        if ((100 - this.rightPercent) >= this.fltMinPercent && this.rightPercent >= this.fltMaxPercent) {
+            this.colorAvailableActive.style.right = this.rightPercent + "%";
+            if (areBothSlidersMoving) {
+                this.colorAvailableActive.style.left = 100 - this.rightPercent + "%";
+            }
+        } else if (this.rightPercent <= this.fltMaxPercent) {
+            this.colorAvailableActive.style.right = this.fltMaxPercent + "%";
+            if (areBothSlidersMoving) {
+                this.colorAvailableActive.style.left = 100 - this.fltMaxPercent + "%";
+            }
+        } else if ((100 - this.rightPercent) <= this.fltMinPercent) {
+            this.colorAvailableActive.style.right = 100 - this.fltMinPercent + "%";
+            if (areBothSlidersMoving) {
+                this.colorAvailableActive.style.left = this.fltMinPercent + "%";
+            }
+        }
+
+        if (recountPrice) {
+            this.recountMaxPrice();
+            if (areBothSlidersMoving)
+                this.recountMinPrice();
+        }
+    };
+
+    SmartFilter.prototype.onMoveRightSlider = function (e) {
+        if (!this.isTouch) {
+            this.rightSlider.ondragstart = function () {
+                return false;
+            };
+        }
+
+        if (!this.isTouch) {
+            document.onmousemove = BX.proxy(function (event) {
+                this.rightPercent = 100 - (((this.countNewLeft(event)) * 100) / (this.trackerWrap.offsetWidth));
+                this.makeRightSliderMove();
+            }, this);
+
+            document.onmouseup = function () {
+                document.onmousemove = document.onmouseup = null;
+            };
+        } else {
+            document.ontouchmove = BX.proxy(function (event) {
+                this.rightPercent = 100 - (((this.countNewLeft(event)) * 100) / (this.trackerWrap.offsetWidth));
+                this.makeRightSliderMove();
+            }, this);
+
+            document.ontouchend = function () {
+                document.ontouchmove = document.ontouchend = null;
+            };
+        }
+
+        return false;
+    };
+
+    return SmartFilter;
+})();
+
+
+$(function () {
+    // ajax сброс фильтра clear filter
+    $("body").on("click", "#del_filter", function (e) {
+        /* e.preventDefault();
+         $(".js-page-preloader").show();
+         var url = window.location.pathname;
+         var newUrl = url;
+         var getParams = window.location.search;
+
+         if(url === "/oboi2/") {
+             if (getParams.length > 0)
+                 newUrl = url + getParams + "&del_filter=y";
+             else
+                 newUrl = url + "?del_filter=y";
+         }
+
+         $.get(
+             BX.util.htmlspecialcharsback(newUrl),
+             function (data) {
+                 //$('.js-catalog').html($(data).find(".js-catalog").html());
+                 $('.js-catalog').html($(data).html());
+                 $(".js-page-preloader").hide();
+             }
+         );*/
+        var arr_uri = (window.location.pathname).replace(/^\/+|\/+$/g, '').split('/');
+        if (arr_uri[0] == 'catalog') {
+            var uri = '/' + arr_uri[0] + '/' + arr_uri[1] + '/';
+            max_elements = 2;
+        } else if (arr_uri[0] == 'sale') {
+            var uri = '/sale/';
+        } else if (arr_uri[0] == 'hits') {
+            var uri = '/hits/';
+        } else {
+            var uri = '/oboi/';
+        }
+        e.preventDefault();
+        location.href = uri;
+    })
+        .on("click", ".js-delete-selected-prop", function (e) {
+            e.preventDefault();
+            if($(this).hasClass('js-clicked')){
+            	return false;
+            }
+            var id = $(this).attr("data-id");
+            $(this).addClass("js-clicked");
+            $(this).css({'background-color':'#cccccc'});
+            $(this).closest('.item').css({'color':'#cccccc'});
+            from_delete_selected_prop = true;
+            $("input[id='" + id + "']").click();
+            setTimeout(function(){$(window).scrollTop($(window).scrollTop()+1);$(window).scrollTop($(window).scrollTop()-1);},2000);
+
+        })
+        .on("click", ".js-wrap-catalog-items .pagenav", function (e) {
+
+        	// console.log('view window.location');
+        	// console.log(window.location);
+        	
+            var url_change = window.location.origin;
+            url_change += window.location.pathname;
+
+            var activeSortUrl = $(".sortbutton.active").attr("href");
+        	
+            if(window.location.search.indexOf('sort')>-1){
+                url_get_params = $(".sortbutton.active").attr("href");
+            }
+            activeSortUrl = activeSortUrl.substr(activeSortUrl.indexOf('?') + 1);
+
+            activeSortUrl = activeSortUrl.replace(/\&PAGEN_1=.+/, '');
+
+            activeSortUrl = activeSortUrl.replace(/order=.*/, '');
+
+        	
+            if ($(".sortbutton.active").hasClass("asc")) {
+                activeSortUrl += "order=asc";
+            } else if ($(".sortbutton.active").hasClass("desc")) {
+                activeSortUrl += "order=desc";
+            }
+
+        	
+            if ($(".js_list_by .active").length) {
+                activeSortUrl = activeSortUrl.replace(/list_by=.*/, '');
+                activeSortUrl += "&list_by="+$(".js_list_by .active").text();
+            }
+
+            if (resultAjaxRequest.length <= 0) {
+                $(location).attr('href', $(this).attr("href"));
+                return false;
+            }
+            e.preventDefault();
+
+            $(".js-page-preloader").show();
+
+            var reg = /(PAGEN_[0-9=]+)/;
+
+            var arPagen = reg.exec($(this).attr("href"));
+
+            var url = "/ajax/view/catalog_ajax_oboi.php";
+
+            if (activeSortUrl) {
+                url = url + "?" + activeSortUrl;
+            }
+
+            if (arPagen !== null) {
+                if (activeSortUrl) {
+                    url = url + "&" + arPagen[0];
+                    url_change += '?'+activeSortUrl + "&" + arPagen[0];
+                } else {
+                    url = "/ajax/view/catalog_ajax_oboi.php?" + arPagen[0];
+                    url_change += '?' + arPagen[0];
+                }
+            }
+            // console.log(url_change);
+            setLocation(url_change);
+            $.ajax({
+                url: url,
+                type: "POST",
+                data: {
+                    FILTER: resultAjaxRequest,
+                    SECTION_CODE: $(".main-catalog-wrap.catalog-section-product").attr("data-section-code"),
+                    CUR_DIR: $('form.smartfilter').attr('action'),
+                    IS_LEPNINA: $(".js-catalog.main-catalog-wrapper").attr("data-is-lepnina"),
+                    CUR_PAGE: window.location.pathname
+                },
+                success: function (data) {
+                    $(".js-wrap-catalog-items").html(data);
+                    $(".js-page-preloader").hide();
+
+                    if (typeof catalogItemSliderInit === 'function') {
+                        catalogItemSliderInit();
+                    }
+
+                    if(compilation.editing)
+                        compilation.addCatalogItemsCheckboxes();
+                    
+                    var selectedProps = "";
+                    $(".js-catalog .bx-filter input[type='checkbox']:checked").each(function (i, elem) {
+                        var valueField = $(this).parent().attr("data-title");
+                        var idField = $(this).attr("id");
+
+                        // значения для выбранных свойств
+                        if (typeof valueField == "undefined")
+                            valueField = $(this).parent().siblings(".bx-filter-param-label").text();
+
+                        if ($(this).data('alt-name'))
+                            valueField = $(this).data('alt-name');
+
+                        selectedProps =
+                            selectedProps +
+                            "<div class='item'><noindex>" + valueField + "<a href='' data-id='" +
+                            idField +
+                            "' class='js-delete-selected-prop'></a></noindex></div>";
+                        if (!$((this)).parent().hasClass('mean-width')) {
+                            if (!$((this)).parent().hasClass("colors-item")) {
+                                $(this).parent().parent().parent().prepend($(this).parent().parent());
+                            } else {
+                                if ($(this).parent().parent().find(".first_color_block").length > 0) {
+                                    $(this).parent().parent().find(".first_color_block").after($(this).parent());
+                                } else {
+                                    $(this).parent().parent().prepend($(this).parent());
+                                }
+                            }
+                        }
+
+                    });
+
+                    $(".js-selected-props").html(selectedProps);
+                    if ($('.popular-prices .price-item.active').length > 0) {
+                        $(".js-selected-props").append('<div class="item"><noindex>' + $('.popular-prices .price-item.active').text()
+                            + '<a href="javascript:void(0);" class="js-delete-selected-prop popular-prices"></a></noindex></div>');
+                    }
+                    $(".js-page-preloader").hide();
+                }
+            });
+        })
+        .on("click", ".COLLECTIONS  .bx-filter-parameters-box-title.bx-active", function (e) {
+            if ($(this).parent().find(".filter-primary-list").length <= 0) {
+                $.ajax({
+                    url: "/ajax/view/list_brands_collections.php",
+                    type: "POST",
+                    data: {
+                        HOW_SELECT: "COLLECTIONS"
+                    },
+                    success: function (data) {
+                        $(".js-get-collections .bx-filter-block").append(data);
+                    }
+                });
+            }
+        })
+        .on("click", ".BRANDS  .bx-filter-parameters-box-title.bx-active", function (e) {
+            if ($(this).parent().find(".filter-primary-list").length <= 0) {
+                $.ajax({
+                    url: "/ajax/view/list_brands_collections.php",
+                    type: "POST",
+                    data: {
+                        HOW_SELECT: "BRANDS"
+                    },
+                    success: function (data) {
+                        $(".js-get-brands .bx-filter-block").append(data);
+                    }
+                });
+            }
+
+        })
+        .on("click", ".catalog-section .lst-unstld.list-inline a", function (e) {
+
+        	// console.log('test_sort');
+            if (resultAjaxRequest.length <= 0) {
+                // $(location).attr('href', $(this).attr("href"));
+                return true;
+            }
+            e.preventDefault();
+
+            $(".js-page-preloader").show();
+
+            var url = $(this).attr("href"),
+                params = /(\?.*)/.exec(url)[1];
+
+
+            $.ajax({
+                url: "/ajax/view/catalog_ajax_oboi.php" + params,
+                type: "POST",
+                data: {
+                    FILTER: resultAjaxRequest,
+                    SECTION_CODE: $(".main-catalog-wrap.catalog-section-product").attr("data-section-code"),
+                    CUR_DIR: $('form.smartfilter').attr('action'),
+                    IS_LEPNINA: $(".js-catalog.main-catalog-wrapper").attr("data-is-lepnina")
+                },
+                success: function (data) {
+                    $(".js-wrap-catalog-items").html(data);
+                    if ($(".main-catalog-wrap.catalog-section-product").length > 0 || $(".js-catalog.main-catalog-wrapper.lepnina").length > 0)
+                        $(".show_products_or_brands").remove();
+
+                    var selectedProps = "";
+                    $(".js-catalog .bx-filter input[type='checkbox']:checked").each(function (i, elem) {
+                        var valueField = $(this).parent().attr("data-title");
+
+                        // значения для выбранных свойств
+                        if (typeof valueField == "undefined")
+                            valueField = $(this).parent().siblings(".bx-filter-param-label").text();
+
+                        if ($(this).data('alt-name'))
+                            valueField = $(this).data('alt-name');
+
+                        var idField = $(this).attr("id");
+                        selectedProps =
+                            selectedProps +
+                            "<div class='item'>" + valueField + "<a href='' data-id='" +
+                            idField +
+                            "' class='js-delete-selected-prop'></a></div>";
+                    });
+
+                    $(".js-selected-props").html(selectedProps);
+
+                    $(".js-page-preloader").hide();
+                }
+            });
+        })
+        .on("click", ".js_shower", function (e) {
+
+//        	console.log('test_view');
+
+
+            var activeSortUrl = $(".sortbutton.active").attr("href");
+            activeSortUrl = activeSortUrl.substr(activeSortUrl.indexOf('?') + 1);
+
+//            activeSortUrl = activeSortUrl.replace(/\&PAGEN_1=.+/, '');
+
+            activeSortUrl = activeSortUrl.replace(/order=.*/, '');
+
+            if ($(".sortbutton.active").hasClass("asc")) {
+                activeSortUrl += "order=asc";
+            } else if ($(".sortbutton.active").hasClass("desc")) {
+                activeSortUrl += "order=desc";
+            }
+
+            if (resultAjaxRequest.length <= 0) {
+//                $(location).attr('href', $(this).attr("href"));
+            	location.reload();
+                return true;
+            }
+            e.preventDefault();
+
+            $(".js-page-preloader").show();
+
+//            var reg = /(PAGEN_[0-9=]+)/;
+//
+//            var arPagen = reg.exec($(this).find('a').attr("href"));
+
+            var url = "/ajax/view/catalog_ajax_oboi.php";
+
+            if (activeSortUrl) {
+                url = url + "?" + activeSortUrl;
+            }
+
+//            if (arPagen !== null) {
+//                if (activeSortUrl) {
+//                    url = url + "&" + arPagen[0];
+//                } else {
+//                    url = "/ajax/view/catalog_ajax_oboi.php?" + arPagen[0];
+//                }
+//            }
+//        	console.log(url);
+
+            $.ajax({
+                url: url,
+                type: "POST",
+                data: {
+                    FILTER: resultAjaxRequest,
+                    SECTION_CODE: $(".main-catalog-wrap.catalog-section-product").attr("data-section-code"),
+                    CUR_DIR: $('form.smartfilter').attr('action'),
+                    IS_LEPNINA: $(".js-catalog.main-catalog-wrapper").attr("data-is-lepnina")
+                },
+                success: function (data) {
+                    $(".js-wrap-catalog-items").html(data);
+                    if ($(".main-catalog-wrap.catalog-section-product").length > 0 || $(".js-catalog.main-catalog-wrapper.lepnina").length > 0)
+                        $(".show_products_or_brands").remove();
+
+                    var selectedProps = "";
+                    $(".js-catalog .bx-filter input[type='checkbox']:checked").each(function (i, elem) {
+                        var valueField = $(this).parent().attr("data-title");
+
+                        // значения для выбранных свойств
+                        if (typeof valueField == "undefined")
+                            valueField = $(this).parent().siblings(".bx-filter-param-label").text();
+
+                        if ($(this).data('alt-name'))
+                            valueField = $(this).data('alt-name');
+
+                        var idField = $(this).attr("id");
+                        selectedProps =
+                            selectedProps +
+                            "<div class='item'>" + valueField + "<a href='' data-id='" +
+                            idField +
+                            "' class='js-delete-selected-prop'></a></div>";
+                    });
+
+                    $(".js-selected-props").html(selectedProps);
+
+                    $(".js-page-preloader").hide();
+                }
+            });
+        })
+        .on("click", ".first_color_block", function () {
+            $(this).parent().find("label").click();
+        })
+        .on("click", '.bx-filter-param-label a', function (e) {
+            e.preventDefault();
+            $(this).parent().trigger('click');
+            return false;
+        });
+
+    var selectedProps = "";
+    var primary;
+    $(".js-catalog .bx-filter input[type='checkbox']:checked").each(function (i, elem) {
+        var valueField = $(this).parent().attr("data-title");
+        var idField = $(this).attr("id");
+
+        // значения для выбранных свойств
+        if (typeof valueField == "undefined")
+            valueField = $(this).parent().siblings(".bx-filter-param-label").text();
+
+        if ($(this).data('alt-name'))
+            valueField = $(this).data('alt-name');
+
+        let noindexOpen = '<noindex>';
+        let noindexClose = '</noindex>';
+        let pagesWithoutNoindexProperties = [
+            '/oboi/flizelinovye/',
+        ];
+
+        if (pagesWithoutNoindexProperties.includes(window.location.pathname)) {
+            noindexOpen = '';
+            noindexClose = '';
+        }
+
+        selectedProps =
+            selectedProps +
+            "<div class='item'>" + noindexOpen + valueField + "<a href='' data-id='" +
+            idField +
+            "' class='js-delete-selected-prop'></a>" + noindexClose + "</div>";
+
+        if (!$((this)).parent().hasClass('mean-width')) {
+            if (!$((this)).parent().hasClass("colors-item")) {
+                if ($(this).parent().parent().parent().hasClass("filter-secondary-list")) {
+                	primary = $(this).parent().parent().parent().parent().find(".filter-primary-list");
+                	$(this).closest(".filter-secondary-list").prepend(primary.html());
+                	primary.html('');
+                    $(this).parent().parent().parent().parent().find(".filter-primary-list").prepend($(this).parent().parent());
+                } else {
+                    $(this).parent().parent().parent().prepend($(this).parent().parent());
+                }
+            } else {
+                if ($(this).parent().parent().find(".first_color_block").length > 0) {
+                    $(this).parent().parent().find(".first_color_block").after($(this).parent());
+                } else {
+                    $(this).parent().parent().prepend($(this).parent());
+                }
+
+            }
+        }
+
+    });
+
+    if ($('.popular-prices .price-item.active').length > 0) {
+        selectedProps =
+            selectedProps + '<div class="item"><noindex>' + $('.popular-prices .price-item.active').text()
+            + '<a href="javascript:void(0);" class="js-delete-selected-prop popular-prices"></a></noindex></div>';
+    }
+
+
+    $(".js-selected-props").html(selectedProps);
+
+    // запрет отправки формы при клике на enter
+    $($('.smartfilter')).keydown(function (event) {
+        if (event.keyCode == 13) {
+            event.preventDefault();
+            return false;
+        }
+    });
+
+    // клик на популярные цены
+    $(document).on('click', '.popular-prices .price-item', function (e) {
+        e.preventDefault();
+        if ($(this).hasClass('disabled')) {
+            return false;
+        }
+        var firstPrice = $(this).find('.first-price').text();
+        var secondPrice = $(this).find('.second-price').text();
+        var minPrice = $('#catalogSectionSmartFilter_P1_MIN');
+        var maxPrice = $('#catalogSectionSmartFilter_P1_MAX');
+        var minPriceDefault = minPrice.attr('placeholder');
+        var maxPriceDefault = maxPrice.attr('placeholder');
+        var props = $('.js-selected-props.selected-props');
+
+        if ($(this).hasClass('active')) {
+            //return false;
+            $(this).removeClass('active');
+            minPrice.val(minPriceDefault);
+            maxPrice.val(maxPriceDefault);
+        } else {
+            $('.popular-prices .price-item').removeClass('active');
+            $(this).addClass('active');
+
+            minPrice.val(0);
+            maxPrice.val('');
+
+            if (firstPrice)
+                minPrice.val(firstPrice);
+
+//            if (secondPrice)
+//                maxPrice.val(secondPrice);
+
+            if (secondPrice){
+                maxPrice.val(secondPrice);
+            } else {
+                maxPrice.val(maxPriceDefault);
+            }
+        }
+
+        minPrice.keyup();
+        maxPrice.keyup();
+        return false;
+    });
+    $(document).on('input', '#catalogSectionSmartFilter_P1_MIN, #catalogSectionSmartFilter_P1_MAX', function () {
+        $('.popular-prices .price-item').removeClass('active');
+    });
+    $(document).on('click', '.js-delete-selected-prop.popular-prices', function () {
+        var minPrice = $('#catalogSectionSmartFilter_P1_MIN');
+        var maxPrice = $('#catalogSectionSmartFilter_P1_MAX');
+        minPrice.val('').keyup();
+        maxPrice.val('').keyup();
+        $('.popular-prices .price-item').removeClass('active');
+        $(this).parents('.item').remove();
+    });
+
+    if ($(window).width() > 1000) {
+        $(".bx-sidebar-block").stick_in_parent({
+            offset_top: 150,
+        });
+    }
+
+    $(document).on('click', '.show-btn', function () {
+        var prop = $(this).data('prop');
+        $('#show-btn-' + prop).hide();
+        $('#hide-btn-' + prop).show();
+        $('#list-prop-' + prop).show();
+    });
+    $(document).on('click', '.hide-btn', function () {
+        var prop = $(this).data('prop');
+        $('#show-btn-' + prop).show();
+        $('#hide-btn-' + prop).hide();
+        $('#list-prop-' + prop).hide();
+    });
+
+    // показывать или скрывать дополнительную фиксированную кнопку Показать
+    var filter_popup_shown = false;
+    $(window).on('resize scroll', function () {
+        if ($('.filter-short-popup').is(':visible')) {
+
+            var top_of_element = $('.filter-short-popup').offset().top;
+            var bottom_of_element = $('.filter-short-popup').offset().top + $('.filter-short-popup').outerHeight();
+            var bottom_of_screen = $(window).scrollTop() + $(window).innerHeight();
+            var top_of_screen = $(window).scrollTop();
+
+            if ((bottom_of_screen > top_of_element) && (top_of_screen < bottom_of_element)) {
+                // the element is visible, do something
+                filter_popup_shown = false;
+                $('.fixed-filter-short-popup').hide();
+                $('.fixed-filter-short-popup').find('span').addClass('loading');
+            } else {
+                // the element is not visible, do something else
+                if (!filter_popup_shown) {
+                    var html = $('.filter-short-popup').find('span').html();
+                    $('.fixed-filter-short-popup').find('span').html(html);
+                    var parent_offset = $('.smartfilter').offset();
+                    $('.fixed-filter-short-popup').css({
+                        left: parent_offset.left + 'px',
+                        width: $('.smartfilter').width() + 'px'
+                    });
+                    $('.fixed-filter-short-popup').show();
+                    if ($('.fixed-filter-short-popup').find('.loading').length > 0) {
+                        var fixed_filter_popup_interval = setInterval(function () {
+                            if ($('.filter-short-popup').find('.loading').length == 0) {
+                                var html = $('.filter-short-popup').find('span').html();
+                                var total_element = parseInt(html.trim());
+                                var count_label = declOfNum(total_element, ['товар', 'товара', 'товаров']);
+                                $('.fixed-filter-short-popup').find('span').html(html);
+                                $('.fixed-filter-short-popup').find('span').removeClass('loading');
+                                $('.fixed-filter-short-popup').find('font').html(count_label);
+                                clearInterval(fixed_filter_popup_interval);
+                            }
+                        }, 100)
+                    } else {
+                        var html = $('.filter-short-popup').find('span').html();
+                        var total_element = parseInt(html.trim());
+                        var count_label = declOfNum(total_element, ['товар', 'товара', 'товаров']);
+                        $('.fixed-filter-short-popup').find('font').html(count_label);
+                    }
+                }
+                filter_popup_shown = true;
+            }
+        }
+    });
+
+    // subsections_from_filter();
+});
+
+function price_button_toggle(min_price) {
+    $('.popular-prices .price-item').each(function (i) {
+        if ($(this).find('.second-price').length > 0) {
+            var price_to = parseInt($(this).find('.second-price').text().trim());
+            if (min_price >= price_to) {
+                $(this).addClass('disabled');
+            } else {
+                $(this).removeClass('disabled');
+            }
+        } else {
+            var price_to = parseInt($(this).find('.first-price').text().trim());
+            if (min_price > price_to) {
+                $(this).addClass('disabled');
+            } else {
+                $(this).removeClass('disabled');
+            }
+        }
+    });
+}
+
+function smart_filter_make_url(form) {
+    console.log('smart_filter_make_url');
+
+    var model = ['price', '212', '37', '259', '47', '45', '48', '260', '108', '46', '36', '261', '262', '196'];
+    var res = [];
+    var final = [];
+    $(form).find('input:checked').each(function (i) {
+        if (typeof $(this).data('slug') !== 'undefined') {
+            var slug = $(this).data('slug');
+            var name = $(this).attr('name');
+            var arr = name.split('_');
+            var id = parseInt(arr[1]);
+            res[id] = slug;
+        }
+    });
+    if ($(form).find('.price-item.active').length > 0) {
+        $(form).find('.price-item.active').each(function (i) {
+            if (typeof $(this).data('slug') !== 'undefined') {
+                var slug = $(this).data('slug');
+                var id = 'price';
+                res[id] = slug;
+            }
+        });
+    } else {
+        var price_min = $('#catalogSectionSmartFilter_P1_MIN').val();
+        var price_max = $('#catalogSectionSmartFilter_P1_MAX').val();
+        if ((price_min != '' || price_max != '') && (price_min != '0' && price_max != '') && price_min !== undefined && price_max !== undefined) {
+            var slug = 'price-' + (price_min == '0' ? '' : price_min) + '-' + price_max;
+            var id = 'price';
+            res[id] = slug;
+        }
+
+        // console.log(price_min, price_max);
+    }
+    $.each(model, function (i, val) {
+        if (val == 'price') {
+            final.push(res['price']);
+            return true;
+        }
+        var k = parseInt(val);
+        if (typeof res[k] != "undefined") {
+            final.push(res[k]);
+        }
+    });
+    if (final.length == 0) {
+        return;
+    }
+
+    if (typeof final[0] == 'undefined') {
+        final.splice(0, 1);
+    }
+
+    // var max_elements = 3;
+    var max_elements = 10;
+    var arr_uri = (window.location.pathname).replace(/^\/+|\/+$/g, '').split('/');
+    if (arr_uri[0] == 'catalog') {
+        var uri = '/' + arr_uri[0] + '/' + arr_uri[1];
+        // max_elements = 2;
+        max_elements = 10;
+    } else if (arr_uri[0] == 'sale') {
+        var uri = '/sale';
+    } else if (arr_uri[0] == 'hits') {
+        var uri = '/hits';
+    } else {
+        var uri = '/oboi';
+    }
+
+    for (var i = 0; i < max_elements; i++) {
+        if (typeof final[i] != "undefined") {
+            uri += '/' + final[i];
+        }
+    }
+    uri += '/';
+    var path = window.location.pathname;
+    var href = window.location.href;
+
+    href = href.replace(path, uri);
+
+    // console.log(href);
+
+    setLocation(href);
+}
+
+function setLocation(curLoc) {
+	// console.log(curLoc);
+    try {
+        history.pushState(null, null, curLoc);
+        return;
+    } catch (e) {
+    }
+    location.hash = '#' + curLoc;
+}
+
+// выводит блок ссылок на подразделы фильтра
+function subsections_from_filter() {
+    if ((
+            ($('.bx-filter-param-label.label-checked-value').length < 3 && $('.price-item.active').length == 0)
+            ||
+            ($('.bx-filter-param-label.label-checked-value').length < 2 && $('.price-item.active').length == 1)
+        )
+        &&
+        $('.subsections').length == 0
+        &&
+        $(window).width() > 1200
+    ) {
+        var subsections = {};
+        var current_uri = window.location.pathname;
+        var el;
+
+        var n = 0;
+        $('.bx-filter-param-label').children('a').each(function (i) {
+            el = $(this);
+            var href = el.attr('href');
+            var name = el.text().trim();
+            if (href.match(current_uri + '.*')) {
+                subsections[href] = name;
+                n++;
+                if (n > 24) {
+                    return false;
+                }
+            }
+        });
+        if (Object.keys(subsections).length < 25) {
+            var length_diff = 25 - Object.keys(subsections).length;
+            var arr_uri = current_uri.replace(/^\/+|\/+$/g, '').split('/');
+            if (arr_uri[0] == 'catalog' && arr_uri.length == 4) {
+                return;
+            }
+            if (typeof arr_uri[2] == 'undefined') {
+                var pattern = arr_uri[0] + '/.*/' + arr_uri[1] + '/';
+            } else {
+                var pattern = arr_uri[0] + '/' + arr_uri[1] + '/.*/' + arr_uri[2];
+                var pattern2 = arr_uri[0] + '/.*/' + arr_uri[1] + '/' + arr_uri[2];
+            }
+            var n = 0;
+            $('.bx-filter-param-label').children('a').each(function (i) {
+                el = $(this);
+                var href = el.attr('href');
+                var name = el.text().trim();
+                if (href.match(pattern)) {
+                    subsections[href] = name;
+                    n++;
+                    if (n >= length_diff) {
+                        return false;
+                    }
+                }
+            });
+            if (n == 0) {
+                // pattern2
+                $('.bx-filter-param-label').children('a').each(function (i) {
+                    el = $(this);
+                    var href = el.attr('href');
+                    var name = el.text().trim();
+                    if (href.match(pattern2)) {
+                        subsections[href] = name;
+                        n++;
+                        if (n >= length_diff) {
+                            return false;
+                        }
+                    }
+                });
+            }
+        }
+        if (Object.keys(subsections).length > 0) {
+            $subsection_css = (Object.keys(subsections).length < 6) ? ' one-row' : '';
+            var html = '<div class="subsections" style="display:none;"><div class="subsections-wrap' + $subsection_css + '"><div class="subsections-wrap2">';
+            $.each(subsections, function (key, val) {
+                url = key;
+                html += '<div class="subsection' + $subsection_css + '"><a href="' + url + '">' + val + '</a></div>';
+            });
+            html += '</div></div>';
+            if (Object.keys(subsections).length > 10) {
+                html += '<div class="show-more">показать еще</div>';
+            } else {
+                $('.subsections-wrap').css('height', 'auto');
+            }
+            html += '</div>';
+            $('.catalog-section').prepend(html);
+            $('.subsections').slideDown();
+        }
+    }
+}
+
+function declOfNum(number, titles) {
+    cases = [2, 0, 1, 1, 1, 2];
+    return titles[(number % 100 > 4 && number % 100 < 20) ? 2 : cases[(number % 10 < 5) ? number % 10 : 5]];
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    let filterSearchInputs = document.querySelectorAll('[data-role="filter-search-input"]');
+    filterSearchInputs.forEach((filterSearchInput) => {
+        filterSearchInput.addEventListener('input', (e) => {
+            let container = e.currentTarget.closest('div');
+            let variants = container.querySelectorAll('.checkbox label a');
+            let searchPhrase = e.currentTarget.value.toLowerCase();
+            let showMoreBtn = container.querySelector('[data-role="filter-show-more"]');
+            let hideMoreBtn = container.querySelector('[data-role="filter-hide-more"]');
+            let filterSecondaryList = container.querySelector('.filter-secondary-list');
+
+            if (hideMoreBtn)
+                hideMoreBtn.style.display = 'none';
+
+            if (showMoreBtn && filterSecondaryList) {
+                if (searchPhrase.length > 0) {
+                    showMoreBtn.style.display = 'none';
+                    filterSecondaryList.style.display = 'block';
+                } else {
+                    showMoreBtn.style.display = 'block';
+                    filterSecondaryList.style.display = 'none';
+                }
+            }
+
+            variants.forEach((variant) => {
+                if (variant.innerText.toLowerCase().includes(searchPhrase))
+                    variant.closest('.checkbox').style.display = 'block';
+                else
+                    variant.closest('.checkbox').style.display = 'none';
+            });
+        });
+    });
+
+    let showAllPropsBtn = document.querySelector('.show-all-props__btn');
+    if (showAllPropsBtn)
+        showAllPropsBtn.addEventListener('click', (e) => {
+            let filter = e.currentTarget.closest('.bx-filter');
+
+            if (!filter.classList.contains('_show-all-props')) {
+                filter.classList.add('_show-all-props');
+                e.currentTarget.querySelector('span').innerText = 'Свернуть';
+            } else {
+                filter.classList.remove('_show-all-props');
+                e.currentTarget.querySelector('span').innerText = 'Развернуть';
+            }
+        });
+});
+/* End */
+;
+; /* Start:"a:4:{s:4:"full";s:88:"/bitrix/components/uniofweb/shop.window/templates/oboi_redesign/script.js?17070778592163";s:6:"source";s:73:"/bitrix/components/uniofweb/shop.window/templates/oboi_redesign/script.js";s:3:"min";s:0:"";s:3:"map";s:0:"";}"*/
+document.addEventListener('DOMContentLoaded', () => {
+    sectionsListComponent.init('.sections');
+});
+
+
+let sectionsListComponent = {
+    init: function (container) {
+        sectionsListComponent.container = document.querySelector(container);
+        sectionsListComponent.groups = document.querySelectorAll(container + ' > *');
+        sectionsListComponent.hideGroups();
+    },
+    hideGroups: function() {
+        sectionsListComponent.groups.forEach((group, index) => {
+            if (index === 0)
+                sectionsListComponent.addShowMoreBtn(group);
+            else 
+                group.classList.add('hide');
+        });
+    },
+    addShowMoreBtn: function(currentSection) {
+        if (sectionsListComponent.container.querySelector('.sections__show-more'))
+            sectionsListComponent.container.querySelector('.sections__show-more').remove();
+
+        let showMoreBtn = sectionsListComponent.createButton('Ещё');
+        showMoreBtn.addEventListener('click', sectionsListComponent.showAllSections);
+
+        currentSection.querySelector('.sections__inner').append(showMoreBtn);
+    },
+    showAllSections: function(e) {
+        sectionsListComponent.groups.forEach((group) => {
+            group.classList.remove('hide');
+        });
+
+        e.currentTarget.remove();
+
+        let hideBtn = sectionsListComponent.createButton('Скрыть')
+        hideBtn.addEventListener('click', sectionsListComponent.hideGroups);
+
+        if (sectionsListComponent.groups[sectionsListComponent.groups.length - 1]) {
+            sectionsListComponent.groups[sectionsListComponent.groups.length - 1].querySelector('.sections__inner').append(hideBtn);
+        }
+    },
+    setContainerHeight: function() {
+        if (sectionsListComponent.sections[0]) {
+            sectionsListComponent.containerHeight = sectionsListComponent.sections[0].offsetHeight * 3;
+        }
+    },
+    createButton: function(label) {
+        let button = document.createElement('span');
+        button.classList.add('sections__item', 'sections__show-more');
+        button.innerText = label;
+
+        return button;
+    }
+}
+/* End */
+;
+; /* Start:"a:4:{s:4:"full";s:125:"/bitrix/templates/mosoboi_ad/components/bitrix/system.pagenavigation/modernmy_with_showmore_redesign/script.js?17171279361454";s:6:"source";s:110:"/bitrix/templates/mosoboi_ad/components/bitrix/system.pagenavigation/modernmy_with_showmore_redesign/script.js";s:3:"min";s:0:"";s:3:"map";s:0:"";}"*/
+$(document).ready(function() {
+    $(document).on('click', '.js_show_more', function(e) {
+        let targetContainer = $('.items-container');
+        let paginationContainer = $('.pagination-container');
+        let url =  $('.js_show_more').attr('data-url');
+        let preloader = $('.catalog-preloader');
+
+        let productsCountFrom = $(e.currentTarget).closest('.modern-page-navigation').find('.product-count-from').html();
+
+        console.log(productsCountFrom);
+
+        if (url !== undefined) {
+            preloader.addClass('show');
+
+            $.ajax({
+                type: 'GET',
+                url: url,
+                dataType: 'html',
+                success: function(data){
+                    $(data).find('.product-count-from').html(productsCountFrom);
+
+                    console.log($(data).find('.product-count-from'));
+
+                    let elements = $(data).find('.items-container').html();
+                    let pagination = $(data).find('.pagination-container').html();
+
+                    targetContainer.append(elements);
+                    paginationContainer.html(pagination);
+
+                    paginationContainer.find('.product-count-from').html(productsCountFrom);
+
+                    if (typeof catalogItemSliderInit === 'function') {
+                        catalogItemSliderInit();
+                    }
+                }
+            })
+        }
+    });
+});
+/* End */
+;
+; /* Start:"a:4:{s:4:"full";s:95:"/bitrix/templates/mosoboi_ad/components/bitrix/catalog.section/oboi_v2/script.js?17192120049944";s:6:"source";s:80:"/bitrix/templates/mosoboi_ad/components/bitrix/catalog.section/oboi_v2/script.js";s:3:"min";s:0:"";s:3:"map";s:0:"";}"*/
+(function() {
+	'use strict';
+
+	if (!!window.JCCatalogSectionComponent)
+		return;
+
+	window.JCCatalogSectionComponent = function(params) {
+		this.formPosting = false;
+		this.siteId = params.siteId || '';
+		this.ajaxId = params.ajaxId || '';
+		this.template = params.template || '';
+		this.componentPath = params.componentPath || '';
+		this.parameters = params.parameters || '';
+
+		if (params.navParams)
+		{
+			this.navParams = {
+				NavNum: params.navParams.NavNum || 1,
+				NavPageNomer: parseInt(params.navParams.NavPageNomer) || 1,
+				NavPageCount: parseInt(params.navParams.NavPageCount) || 1
+			};
+		}
+
+		this.bigData = params.bigData || {enabled: false};
+		this.container = document.querySelector('[data-entity="' + params.container + '"]');
+		this.showMoreButton = null;
+		this.showMoreButtonMessage = null;
+
+		if (this.bigData.enabled && BX.util.object_keys(this.bigData.rows).length > 0)
+		{
+			BX.cookie_prefix = this.bigData.js.cookiePrefix || '';
+			BX.cookie_domain = this.bigData.js.cookieDomain || '';
+			BX.current_server_time = this.bigData.js.serverTime;
+
+			BX.ready(BX.delegate(this.bigDataLoad, this));
+		}
+
+		if (params.initiallyShowHeader)
+		{
+			BX.ready(BX.delegate(this.showHeader, this));
+		}
+
+		if (params.deferredLoad)
+		{
+			BX.ready(BX.delegate(this.deferredLoad, this));
+		}
+
+		if (params.lazyLoad)
+		{
+			this.showMoreButton = document.querySelector('[data-use="show-more-' + this.navParams.NavNum + '"]');
+			this.showMoreButtonMessage = this.showMoreButton.innerHTML;
+			BX.bind(this.showMoreButton, 'click', BX.proxy(this.showMore, this));
+		}
+
+		if (params.loadOnScroll)
+		{
+			BX.bind(window, 'scroll', BX.proxy(this.loadOnScroll, this));
+		}
+	};
+
+	window.JCCatalogSectionComponent.prototype =
+	{
+		checkButton: function()
+		{
+			if (this.showMoreButton)
+			{
+				if (this.navParams.NavPageNomer == this.navParams.NavPageCount)
+				{
+					BX.remove(this.showMoreButton);
+				}
+				else
+				{
+					this.container.appendChild(this.showMoreButton);
+				}
+			}
+		},
+
+		enableButton: function()
+		{
+			if (this.showMoreButton)
+			{
+				BX.removeClass(this.showMoreButton, 'disabled');
+				this.showMoreButton.innerHTML = this.showMoreButtonMessage;
+			}
+		},
+
+		disableButton: function()
+		{
+			if (this.showMoreButton)
+			{
+				BX.addClass(this.showMoreButton, 'disabled');
+				this.showMoreButton.innerHTML = BX.message('BTN_MESSAGE_LAZY_LOAD_WAITER');
+			}
+		},
+
+		loadOnScroll: function()
+		{
+			var scrollTop = BX.GetWindowScrollPos().scrollTop,
+				containerBottom = BX.pos(this.container).bottom;
+
+			if (scrollTop + window.innerHeight > containerBottom)
+			{
+				this.showMore();
+			}
+		},
+
+		showMore: function()
+		{
+			if (this.navParams.NavPageNomer < this.navParams.NavPageCount)
+			{
+				var data = {};
+				data['action'] = 'showMore';
+				data['PAGEN_' + this.navParams.NavNum] = this.navParams.NavPageNomer + 1;
+
+				if (!this.formPosting)
+				{
+					this.formPosting = true;
+					this.disableButton();
+					this.sendRequest(data);
+				}
+			}
+		},
+
+		bigDataLoad: function()
+		{
+			var url = 'https://analytics.bitrix.info/crecoms/v1_0/recoms.php',
+				data = BX.ajax.prepareData(this.bigData.params);
+
+			if (data)
+			{
+				url += (url.indexOf('?') !== -1 ? '&' : '?') + data;
+			}
+
+			var onReady = BX.delegate(function(result){
+				this.sendRequest({
+					action: 'deferredLoad',
+					bigData: 'Y',
+					items: result && result.items || [],
+					rid: result && result.id,
+					count: this.bigData.count,
+					rowsRange: this.bigData.rowsRange,
+					shownIds: this.bigData.shownIds
+				});
+			}, this);
+
+			BX.ajax({
+				method: 'GET',
+				dataType: 'json',
+				url: url,
+				timeout: 3,
+				onsuccess: onReady,
+				onfailure: onReady
+			});
+		},
+
+		deferredLoad: function()
+		{
+			this.sendRequest({action: 'deferredLoad'});
+		},
+
+		sendRequest: function(data)
+		{
+			var defaultData = {
+				siteId: this.siteId,
+				template: this.template,
+				parameters: this.parameters
+			};
+
+			if (this.ajaxId)
+			{
+				defaultData.AJAX_ID = this.ajaxId;
+			}
+
+			BX.ajax({
+				url: this.componentPath + '/ajax.php' + (document.location.href.indexOf('clear_cache=Y') !== -1 ? '?clear_cache=Y' : ''),
+				method: 'POST',
+				dataType: 'json',
+				timeout: 60,
+				data: BX.merge(defaultData, data),
+				onsuccess: BX.delegate(function(result){
+					if (!result || !result.JS)
+						return;
+
+					BX.ajax.processScripts(
+						BX.processHTML(result.JS).SCRIPT,
+						false,
+						BX.delegate(function(){this.showAction(result, data);}, this)
+					);
+				}, this)
+			});
+		},
+
+		showAction: function(result, data)
+		{
+			if (!data)
+				return;
+
+			switch (data.action)
+			{
+				case 'showMore':
+					this.processShowMoreAction(result);
+					break;
+				case 'deferredLoad':
+					this.processDeferredLoadAction(result, data.bigData === 'Y');
+					break;
+			}
+		},
+
+		processShowMoreAction: function(result)
+		{
+			this.formPosting = false;
+			this.enableButton();
+
+			if (result)
+			{
+				this.navParams.NavPageNomer++;
+				this.processItems(result.items);
+				this.processPagination(result.pagination);
+				this.checkButton();
+			}
+		},
+
+		processDeferredLoadAction: function(result, bigData)
+		{
+			if (!result)
+				return;
+
+			var position = bigData ? this.bigData.rows : {};
+
+			this.processItems(result.items, BX.util.array_keys(position));
+		},
+
+		processItems: function(itemsHtml, position)
+		{
+			if (!itemsHtml)
+				return;
+
+			var processed = BX.processHTML(itemsHtml, false),
+				temporaryNode = BX.create('DIV');
+
+			var items, k, origRows;
+
+			temporaryNode.innerHTML = processed.HTML;
+			items = temporaryNode.querySelectorAll('[data-entity="items-row"]');
+
+			if (items.length)
+			{
+				this.showHeader(true);
+
+				for (k in items)
+				{
+					if (items.hasOwnProperty(k))
+					{
+						origRows = position ? this.container.querySelectorAll('[data-entity="items-row"]') : false;
+						items[k].style.opacity = 0;
+
+						if (origRows && BX.type.isDomNode(origRows[position[k]]))
+						{
+							origRows[position[k]].parentNode.insertBefore(items[k], origRows[position[k]]);
+						}
+						else
+						{
+							this.container.appendChild(items[k]);
+						}
+					}
+				}
+
+				new BX.easing({
+					duration: 2000,
+					start: {opacity: 0},
+					finish: {opacity: 100},
+					transition: BX.easing.makeEaseOut(BX.easing.transitions.quad),
+					step: function(state){
+						for (var k in items)
+						{
+							if (items.hasOwnProperty(k))
+							{
+								items[k].style.opacity = state.opacity / 100;
+							}
+						}
+					},
+					complete: function(){
+						for (var k in items)
+						{
+							if (items.hasOwnProperty(k))
+							{
+								items[k].removeAttribute('style');
+							}
+						}
+					}
+				}).animate();
+			}
+
+			BX.ajax.processScripts(processed.SCRIPT);
+		},
+
+		processPagination: function(paginationHtml)
+		{
+			if (!paginationHtml)
+				return;
+
+			var pagination = document.querySelectorAll('[data-pagination-num="' + this.navParams.NavNum + '"]');
+			for (var k in pagination)
+			{
+				if (pagination.hasOwnProperty(k))
+				{
+					pagination[k].innerHTML = paginationHtml;
+				}
+			}
+		},
+
+		showHeader: function(animate)
+		{
+			var parentNode = BX.findParent(this.container, {attr: {'data-entity': 'parent-container'}}),
+				header;
+
+			if (parentNode && BX.type.isDomNode(parentNode))
+			{
+				header = parentNode.querySelector('[data-entity="header"');
+
+				if (header && header.getAttribute('data-showed') != 'true')
+				{
+					header.style.display = '';
+
+					if (animate)
+					{
+						new BX.easing({
+							duration: 2000,
+							start: {opacity: 0},
+							finish: {opacity: 100},
+							transition: BX.easing.makeEaseOut(BX.easing.transitions.quad),
+							step: function(state){
+								header.style.opacity = state.opacity / 100;
+							},
+							complete: function(){
+								header.removeAttribute('style');
+								header.setAttribute('data-showed', 'true');
+							}
+						}).animate();
+					}
+					else
+					{
+						header.style.opacity = 100;
+					}
+				}
+			}
+		}
+	};
+
+	// кнопка показать еще у "подкатегорий"
+	$(document).on('click', '.subsections .show-more', function(){
+		var subSectWrap = $('.subsections .subsections-wrap');
+		var subSectWrap2 = $('.subsections .subsections-wrap2').height();
+
+		if(!subSectWrap.hasClass('active'))
+		{
+			subSectWrap.addClass('active').animate({height: subSectWrap2}, 200, function() {});
+			$(this).text('скрыть');
+		}
+		else
+		{
+			subSectWrap.removeClass('active').animate({height: '110px'}, 200, function() {});
+			$(this).text('Еще');
+		}
+	});
+
+	// кнопка показать еще у "/oboi"
+	$(document).on('click', '.shop-window .show-more', function(){
+		var subSectWrap = $('.shop-window-wrap');
+		var subSectWrap2 = $('.shop-window-wrap2').height() + 20;
+
+		if(!subSectWrap.hasClass('active'))
+		{
+			subSectWrap.addClass('active').animate({height: subSectWrap2}, 200, function() {});
+			$(this).text('скрыть');
+		}
+		else
+		{
+			subSectWrap.removeClass('active').animate({height: '140px'}, 200, function() {});
+			$(this).text('Еще');
+		}
+	});
+
+	$(document).on('click', 'a.pagenav', function () {
+        $('html, body').animate({
+            scrollTop: $("#h1-pages").offset().top
+        }, 2000);
+    });
+
+	$('.minimized').click(function(event) {
+		let i_path = $(this).attr('data-image');
+		console.log(i_path)
+		$('body').append('<div id="overlay"></div><div id="magnify"><img src="'+i_path+'"><div id="close-popup"><i></i></div></div>');
+		$('#magnify').css({
+			left: ($(document).width() - $('#magnify').outerWidth())/2,
+			top: ($(window).height() - $('#magnify').outerHeight())/2
+		});
+		$('#overlay, #magnify').fadeIn('fast');
+	});
+
+	$('body').on('click', '#close-popup, #overlay', function(event) {
+		event.preventDefault();
+
+		$('#overlay, #magnify').fadeOut('fast', function() {
+			$('#close-popup, #magnify, #overlay').remove();
+		});
+	});
+
+	$("body").on("click", ".js_shower", function (e) {
+		let mode = $(this).attr('data-mode');
+		if(mode)
+			$.cookie('view_mode', mode, { expires: 7, path: '/' });
+	});
+})();
+
+
+/* End */
+;
+; /* Start:"a:4:{s:4:"full";s:63:"/bitrix/templates/mosoboi_ad/js/jquery.cookie.js?16765393443252";s:6:"source";s:48:"/bitrix/templates/mosoboi_ad/js/jquery.cookie.js";s:3:"min";s:0:"";s:3:"map";s:0:"";}"*/
+/*!
+ * jQuery Cookie Plugin v1.4.1
+ * https://github.com/carhartl/jquery-cookie
+ *
+ * Copyright 2006, 2014 Klaus Hartl
+ * Released under the MIT license
+ */
+(function (factory) {
+	if (typeof define === 'function' && define.amd) {
+		// AMD (Register as an anonymous module)
+		define(['jquery'], factory);
+	} else if (typeof exports === 'object') {
+		// Node/CommonJS
+		module.exports = factory(require('jquery'));
+	} else {
+		// Browser globals
+		factory(jQuery);
+	}
+}(function ($) {
+
+	var pluses = /\+/g;
+
+	function encode(s) {
+		return config.raw ? s : encodeURIComponent(s);
+	}
+
+	function decode(s) {
+		return config.raw ? s : decodeURIComponent(s);
+	}
+
+	function stringifyCookieValue(value) {
+		return encode(config.json ? JSON.stringify(value) : String(value));
+	}
+
+	function parseCookieValue(s) {
+		if (s.indexOf('"') === 0) {
+			// This is a quoted cookie as according to RFC2068, unescape...
+			s = s.slice(1, -1).replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+		}
+
+		try {
+			// Replace server-side written pluses with spaces.
+			// If we can't decode the cookie, ignore it, it's unusable.
+			// If we can't parse the cookie, ignore it, it's unusable.
+			s = decodeURIComponent(s.replace(pluses, ' '));
+			return config.json ? JSON.parse(s) : s;
+		} catch(e) {}
+	}
+
+	function read(s, converter) {
+		var value = config.raw ? s : parseCookieValue(s);
+		return $.isFunction(converter) ? converter(value) : value;
+	}
+
+	var config = $.cookie = function (key, value, options) {
+
+		// Write
+
+		if (arguments.length > 1 && !$.isFunction(value)) {
+			options = $.extend({}, config.defaults, options);
+
+			if (typeof options.expires === 'number') {
+				var days = options.expires, t = options.expires = new Date();
+				t.setMilliseconds(t.getMilliseconds() + days * 864e+5);
+			}
+
+			return (document.cookie = [
+				encode(key), '=', stringifyCookieValue(value),
+				options.expires ? '; expires=' + options.expires.toUTCString() : '', // use expires attribute, max-age is not supported by IE
+				options.path    ? '; path=' + options.path : '',
+				options.domain  ? '; domain=' + options.domain : '',
+				options.secure  ? '; secure' : ''
+			].join(''));
+		}
+
+		// Read
+
+		var result = key ? undefined : {},
+			// To prevent the for loop in the first place assign an empty array
+			// in case there are no cookies at all. Also prevents odd result when
+			// calling $.cookie().
+			cookies = document.cookie ? document.cookie.split('; ') : [],
+			i = 0,
+			l = cookies.length;
+
+		for (; i < l; i++) {
+			var parts = cookies[i].split('='),
+				name = decode(parts.shift()),
+				cookie = parts.join('=');
+
+			if (key === name) {
+				// If second argument (value) is a function it's a converter...
+				result = read(cookie, value);
+				break;
+			}
+
+			// Prevent storing a cookie that we couldn't decode.
+			if (!key && (cookie = read(cookie)) !== undefined) {
+				result[name] = cookie;
+			}
+		}
+
+		return result;
+	};
+
+	config.defaults = {};
+
+	$.removeCookie = function (key, options) {
+		// Must not alter options, thus extending a fresh object...
+		$.cookie(key, '', $.extend({}, options, { expires: -1 }));
+		return !$.cookie(key);
+	};
+
+}));
+/* End */
+;
+; /* Start:"a:4:{s:4:"full";s:92:"/bitrix/templates/mosoboi_ad/components/bitrix/catalog.item/oboi_v2/script.js?17212960603185";s:6:"source";s:77:"/bitrix/templates/mosoboi_ad/components/bitrix/catalog.item/oboi_v2/script.js";s:3:"min";s:0:"";s:3:"map";s:0:"";}"*/
+$(document).ready(function () {
+    $.ajax({
+        url: "/ajax/result/getCompareList.php",
+        success: function (answer) {
+            var arCompareList = $.parseJSON(answer);
+            console.log(arCompareList);
+            if(!arCompareList.error) {
+                $.each(arCompareList, function () {
+                    $("#compare_" + this.ID)
+                        .addClass("change")
+                        .find("img")
+                        .attr("src", "/images/compare_active.png");
+                });
+            } else {
+                $.each($("a.compare_add--new.change"), function () {
+                    $(this)
+                        .removeClass("change")
+                        .find("img")
+                        .attr("src", "/images/compare_not_active.png");
+                });
+            }
+        }
+    });
+    $('body').on('click', '.btn-interior-image', function (e) {
+        e.preventDefault();
+        $.colorbox.remove();
+        $(this).next('.interior-image-colorbox').find('a.gallery-interior-colorbox').colorbox({
+            open: true,
+            rel:'gal'
+        });
+    });
+})
+
+function catalogItemSliderInit() {
+    let cardSliderItems = document.querySelectorAll('.card-slider__item');
+    cardSliderItems.forEach((cardSliderItem) => {
+        cardSliderItem.addEventListener('mouseover', function() {
+            let container = this.closest('a');
+
+            container.querySelector('img').src = this.dataset.src;
+            container.querySelector('.card-slider__dot.active').classList.remove('active');
+            container.querySelector('.card-slider__dot[data-id="' + this.dataset.id + '"]').classList.add('active');
+            // console.log(this.dataset.src);
+        });
+    });
+
+    let cardSliders = document.querySelectorAll('.card-slider, .card-slider__dots');
+    cardSliders.forEach((cardSlider) => {
+        cardSlider.addEventListener('mouseleave', function() {
+            let container = this.closest('a');
+
+            container.querySelector('img').src = container.dataset.imgSrc;
+            container.querySelector('.card-slider__dot.active').classList.remove('active');
+            container.querySelector('.card-slider__dot:first-child').classList.add('active');
+        });
+    });
+
+    let sliderDots = document.querySelectorAll('.card-slider__dot');
+    sliderDots.forEach((sliderDot) => {
+        sliderDot.addEventListener('mouseover', function() {
+            let container = this.closest('a');
+
+            container.querySelector('.card-slider__dot.active').classList.remove('active');
+            this.classList.add('active');
+            let imgSrc = container.querySelector('.card-slider__item[data-id="' + this.dataset.id + '"]').dataset.src;
+            if (imgSrc) {
+                container.querySelector('img').src = imgSrc;
+            }
+        });
+    });
+
+    let cardImagesSwiper = new Swiper('.card-images', {
+        // loop: true,
+        pagination: {
+            el: '.card-images__pagination',
+        }
+    });
+}
+
+document.addEventListener('DOMContentLoaded', catalogItemSliderInit);
+/* End */
+;; /* /bitrix/templates/mosoboi_ad/components/uniofweb/bitrix.catalog.smart.filter/lepnina_new/script.js?176130457476542*/
+; /* /bitrix/components/uniofweb/shop.window/templates/oboi_redesign/script.js?17070778592163*/
+; /* /bitrix/templates/mosoboi_ad/components/bitrix/system.pagenavigation/modernmy_with_showmore_redesign/script.js?17171279361454*/
+; /* /bitrix/templates/mosoboi_ad/components/bitrix/catalog.section/oboi_v2/script.js?17192120049944*/
+; /* /bitrix/templates/mosoboi_ad/js/jquery.cookie.js?16765393443252*/
+; /* /bitrix/templates/mosoboi_ad/components/bitrix/catalog.item/oboi_v2/script.js?17212960603185*/

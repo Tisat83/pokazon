@@ -1,0 +1,197 @@
+(function () {
+  let CFSAS = function () {
+    this.cUrls = [
+      "loan_applications_result.php",
+      "quick_order_result.php",
+      "poisk_title_result.php",
+      "top_submenu_banner_result.php",
+      "mailing_form.php",
+      "specprice_order_result.php",
+      "reklamForm_result.php",
+      "reklamForm_result_kraski.php",
+      "complaint_form.php",
+      "send_me_photo_result.php",
+      "podbor_po_foto_result.php",
+      "podbor_in_list.php",
+      "poisk_page_result.php",
+      "cheaper_form_result.php",
+      "weekend_order_result.php",
+    ];
+    this.fields = {
+      message: {
+        address: "Адрес",
+        "order-number": "Номер заказа",
+        "order-date": "Дата заказа",
+        brand: "Производитель / бренд",
+        collection: "Коллекция",
+        artnumber: "Артикул",
+        "part-number": "Номер партии",
+        quantity: "Количество купленного товара (рул., м/п)",
+        "defect-quantity": "Количество бракованного товара",
+        "opened-quantity": "Количество вскрытых рулонов",
+        "closed-quantity": "Количество закрытых рулонов (в заводской упаковке)",
+        "used-quantity": "Количество оклеенных рулонов",
+        glue: "Каким клеем вы пользовались",
+        message: "Сообщение",
+        subject: "Тема",
+        best_text: "Сообщение",
+        city_name: "Город",
+        best_price: "Цена товара в другой сети",
+        best_link: "Ссылка на товар",
+        showroom: "Шоурум",
+        prod_name: "Товар",
+        prod_url: "Страница товара",
+        comment: "Сообщение",
+        time_from: "Звонить с",
+        time_to: "Звонить до",
+        "defect-find": "Обнаружение брака",
+        "customer-requirements": "Требование заказчика",
+        best_send_to: "Куда отправить фото",
+        item_link: "Ссылка на товар",
+        "montage-date": "Дата монтажа",
+        "kraska-name": "Наименование краски",
+        "color-number": "Номер цвета",
+        "bank-opened-quantity": "Количество используемых банок",
+        "bank-closed-quantity": "Какой малярный инструмент использовался",
+        "painting-tool": "Дата монтажа",
+      },
+    };
+    this.cAjaxSuccessHandler = function (e, q, w) {
+      let cData = { message: "" };
+      let isUrl = false;
+
+      //console.log(this.cUrls);
+
+      this.cUrls.forEach((element) => {
+        if (w.url.includes(element)) {
+          isUrl = true;
+        }
+      });
+      if (!isUrl) {
+        return;
+      }
+      if (q.responseJSON) {
+        console.log('comagic q.responseJSON', q.responseJSON);
+
+        if (
+          q.responseJSON.errors.length ||
+          !q.responseJSON.result ||
+          q.responseJSON.result == ""
+        ) {
+          return;
+        }
+      } else if (q.responseText && w.url.includes("mailing_form.php")) {
+        if (q.responseText != "Ваша заявка принята") {
+          return;
+        }
+      } else if (w.url.includes("reklamForm_result.php") || w.url.includes("reklamForm_result_kraski.php")) {
+        if (q.responseText != "{}") {
+          return;
+        }
+      } else if (w.url.includes("complaint_form.php")) {
+        if (q.responseText.indexOf("Ваше обращение принято") == -1) {
+          return;
+        }
+      } else {
+        return;
+      }
+      let res = [];
+      if (w.data instanceof FormData) {
+        res = w.data;
+      } else {
+        let arr = w.data.split("&");
+        arr.forEach((element) => {
+          let ta = element.split("=");
+          res.push([decodeURIComponent(ta[0]), decodeURIComponent(ta[1])]);
+        });
+      }
+
+      for (let [name, value] of res) {
+        if (["name", "best_name"].includes(name)) {
+          cData.name = value;
+          continue;
+        } else if (["phone", "best_phone"].includes(name)) {
+          cData.phone = value;
+          continue;
+        } else if (["email", "best_email"].includes(name)) {
+          cData.email = value;
+          continue;
+        } else if (typeof this.fields.message[name] != "undefined") {
+          if (name == "defect-find" || name == "customer-requirements") {
+            cData.message +=
+              this.fields.message[name] +
+              ": " +
+              document
+                .querySelector('input[name="' + name + '"]:checked')
+                .closest(".block-inl").innerText +
+              "; ";
+          } else {
+            cData.message += this.fields.message[name] + ": " + value + "; ";
+          }
+
+          continue;
+        } else if (["form_name"].includes(name)) {
+          cData.form_name = value;
+          continue;
+        }
+      }
+
+      if (cData.form_name == 'Рекламации') {
+        let images = '';
+        let userFields = {};
+        for (let [name, value] of res) {
+          userFields[name] = value;
+          console.log(name, value);
+          if (name.includes('photo') && value.includes('upload'))
+            images += 'https://www.mosoboi.ru' + value + '; ';
+        }
+
+        if (images.length > 0)
+          cData.message += 'Прикрепленные изображения: ' + images;
+
+        cData.user_fields = userFields;
+      }
+
+
+      if (w.url.includes('podbor_po_foto_result.php')) {
+        if (q.responseJSON && q.responseJSON.images) {
+          cData.message += 'Прикрепленные изображения: ';
+          q.responseJSON.images.forEach((image) => {
+            cData.message += image + '; ';
+          });
+        }
+      }
+
+      console.log('comagic cData', cData);
+
+      window.Comagic &&
+        window.Comagic.addOfflineRequest &&
+        window.Comagic.addOfflineRequest(cData);
+    };
+
+    this.init = function () {
+      if (!$ && !jQuery) {
+        throw {
+          error: "$ or jQuery is not avalible",
+        };
+        return;
+      }
+      if ($) {
+        $(document).on("ajaxSuccess", this.cAjaxSuccessHandler.bind(this));
+      } else {
+        jQuery(document).on("ajaxSuccess", this.cAjaxSuccessHandler.bind(this));
+      }
+    };
+  };
+  let ComagicFormsSenderAS = new CFSAS();
+  if (
+    ["complete", "loaded", "interactive"].indexOf(document.readyState) !== -1
+  ) {
+    ComagicFormsSenderAS.init();
+  } else {
+    document.addEventListener(
+      "DOMContentLoaded",
+      ComagicFormsSenderAS.init.bind(ComagicFormsSenderAS)
+    );
+  }
+})();

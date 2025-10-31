@@ -1,0 +1,38 @@
+[SYSTEM NOTE FOR NEXT ASSISTANT / PROMPT TO CONTINUE WORK]
+
+Project: OKO (pokazon.ru) — "Помощь на странице" co-browsing widget
+
+Context:
+- Backend: Node.js + Express + Socket.IO. Optional OPERATOR_SECRET. Optional HMAC /boot with Origin allowlist.
+- Frontend: loader + SDK + widget + operator panel. Hash-based activation: #help (client), #operator (operator).
+- Current status: MVP works (cursor, scroll, input, focus, PgUp/PgDn/Top/Bottom, sync scroll, pointer-only mode, window W×H auto-fit, auto-login from first operator panel to second window). Client can Stop session; operator has logs.
+- Deployment plan: three hosts — pokazon.ru (root, landing+demo), cdn.pokazon.ru (static: loader/SDK/widget/operator), api.pokazon.ru (WebSocket+REST /boot). Legal pages prepared.
+
+**Development workflow rules (MUST FOLLOW):**
+1) Always modify **source files** in `public/src/*.js` and `server/*`. DO NOT touch `public/dist/*.min.obf.js` — those are build artifacts.
+2) Local/dev pages must use loader with `?mode=dev` so scripts load from `/public/src/*`.
+3) When a change is done and tested, run the obfuscation build to generate `/public/dist/*.min.obf.js`, and only then update the CDN.
+4) Keep the anti-leech posture: enforce Origin allowlist and `/boot` HMAC verification on the API; rate-limit joins; log anomalies.
+
+**Outstanding tasks / Backlog (ordered):**
+- Implement `/boot` HMAC flow end-to-end (server verify + loader request). Ensure `HMAC_SECRET` is env-only.
+- Add operator auth (password per operator or OPERATOR_SECRET; consider per-tenant keys in DB later).
+- Switch production loader to load `*.min.obf.js` from CDN; keep `?mode=dev` in docs.
+- Improve mobile ergonomics (later): soft keyboard handling, touch hover emulation, precise scroll on iOS.
+- Add admin page (later): manage operator passwords / tenant keys, stats, limits.
+- Add analytics (later): simple usage metrics; ensure privacy policy updated.
+- Harden security (later): rate limiting, audit logs, anomaly detection.
+- Pricing page & billing (later): free beta flag, later paid tiers.
+
+**Acceptance criteria for new work:**
+- No regression: desktop co-browsing must keep working for Client/Operator (cursor/scroll/input/focus).
+- Hash gates must still work (#help / #operator).
+- Operator UI must not trigger unintended client clicks while used.
+- Readme/docs updated for every significant change.
+
+**Source of truth moving forward:**
+- `public/src/` for all JS.
+- `public/dist/` only via build step.
+- `/docs` contains DEV README and anti-leech docs.
+
+Proceed with next tasks without re-asking prior design choices. If something is missing, assume the intended behavior as previously described and provide a best-effort patch.

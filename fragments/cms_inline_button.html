@@ -1,0 +1,8 @@
+<!-- Любая CMS: собственная кнопка в шаблоне -->
+<button id="okoStart">Помощь на странице</button>
+<script>
+  document.getElementById('okoStart').addEventListener('click', async function(){
+    const session = await window.Oko.startSession({ maskSelectors: ['[data-mask]','input[type=password]'] });
+    alert('Код для оператора: ' + session.code);
+  });
+</script>

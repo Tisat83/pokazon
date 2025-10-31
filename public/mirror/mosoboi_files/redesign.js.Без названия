@@ -1,0 +1,76 @@
+document.addEventListener('DOMContentLoaded', sidebarVerticaAlign);
+window.addEventListener('resize', sidebarVerticaAlign);
+
+function sidebarVerticaAlign() {
+    let isRedesignEnabled = document.body.classList.contains('design_v2');
+
+    if (!isRedesignEnabled)
+        return false;
+
+    let container = document.querySelector('#content_part');
+    let sidebar = document.querySelector('.bx-sidebar-block');
+
+    if (container && sidebar) {
+        containerTopOffset = container.getBoundingClientRect().top + 15;
+        sidebarTopOffset = sidebar.getBoundingClientRect().top;
+
+        sidebarStyle= sidebar.currentStyle || window.getComputedStyle(sidebar);
+        if (sidebarStyle) {
+            sidebarMarginTop = Number.parseInt(sidebarStyle.marginTop);
+        }
+        Number.parseInt(window.getComputedStyle(sidebar).marginTop)
+
+        let delta = Math.round(containerTopOffset - sidebarTopOffset);
+        sidebarMarginTop = sidebarMarginTop + delta;
+
+        sidebar.style.marginTop = sidebarMarginTop + 'px';
+    }
+}
+
+// document.addEventListener('DOMContentLoaded', () => {
+//     document.querySelectorAll('.card_item_v2 ').forEach((card) => {
+//         card.addEventListener('mouseenter', (e) => {
+//             if (window.innerWidth > 768) {
+//                 console.log(e.currentTarget.offsetHeight);
+//                 e.currentTarget.closest('.product-item-container').style.height = e.currentTarget.offsetHeight + 2 + 'px';
+//                 e.currentTarget.closest('.product-item-container').classList.add('hover');
+//             }
+//
+//             //e.currentTarget.classList.add('hover');
+//         });
+//         card.addEventListener('mouseleave', (e) => {
+//             if (window.innerWidth > 768) {
+//                 e.currentTarget.closest('.product-item-container').classList.remove('hover');
+//                 e.currentTarget.closest('.product-item-container').style.height = 'unset';
+//             }
+//             //e.currentTarget.classList.remove('hover');
+//         });
+//     });
+// });
+
+$(document).ready(function() {
+    $(document).on('mouseenter', '.card_item_v2', function(e) {
+        if (window.innerWidth > 768) {
+            let propsBlock = e.currentTarget.querySelector('.i_props_block');
+
+            if (propsBlock.offsetHeight > 0)
+                return;
+
+            propsBlock.style.height = propsBlock.scrollHeight + 'px';
+
+            e.currentTarget.closest('.product-item-container').style.height = e.currentTarget.offsetHeight + 1 + 'px';
+            e.currentTarget.closest('.product-item-container').classList.add('hover');
+
+        }
+    });
+
+    $(document).on('mouseleave', '.card_item_v2', function(e) {
+        if (window.innerWidth > 768) {
+            let propsBlock = e.currentTarget.querySelector('.i_props_block');
+            propsBlock.style.height = '0';
+
+            e.currentTarget.closest('.product-item-container').classList.remove('hover');
+            // e.currentTarget.closest('.product-item-container').style.height = 'unset';
+        }
+    });
+});

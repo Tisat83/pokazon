@@ -1,0 +1,104 @@
+
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <title>OKO Operator (Restored scroll + feedback)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; line-height: 1.5; margin:0; }
+    .wrap { max-width: 960px; margin: 0 auto; padding: 16px; }
+    .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    input { padding: 10px; border:1px solid #ccc; border-radius:6px; }
+    button { padding: 10px 14px; border-radius: 8px; border: 1px solid #222; background:#111; color:#fff; cursor:pointer; }
+    .hint { font-size: 14px; color:#555; }
+    .status { margin-top: 8px; }
+    .tools { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+    .tools button { background:#f8f8f8; color:#111; border-color:#ddd; }
+    .feedback { margin-top:12px; padding:10px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; white-space:pre-wrap;}
+    .ripple { position:fixed; width:14px; height:14px; border-radius:50%; background:rgba(59,130,246,.3); transform:translate(-50%,-50%); pointer-events:none; animation:r 0.6s ease-out; z-index: 2147483000;}
+    @keyframes r { from{opacity:1; transform:translate(-50%,-50%) scale(.8);} to{opacity:0; transform:translate(-50%,-50%) scale(6);} }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Панель оператора</h1>
+    <div class="row">
+      <input id="code" placeholder="Код из 6 цифр" maxlength="6">
+      <button id="join">Подключиться</button>
+    </div>
+    <div class="status" id="status"></div>
+    <div class="hint">URL клиента: <span id="clientUrl">неизвестно</span></div>
+
+    <div class="tools">
+      <label class="hint"><input type="checkbox" id="pointerOnly"> Только указка</label>
+      <input id="anchorId" placeholder='Якорь напр. "qty" или "cart"'>
+      <button id="goAnchor">Перейти к якорю</button>
+      <button data-cmd="lineUp">▲</button>
+      <button data-cmd="lineDown">▼</button>
+      <button data-cmd="pageUp">PgUp</button>
+      <button data-cmd="pageDown">PgDn</button>
+      <button data-cmd="top">Top</button>
+      <button data-cmd="bottom">Bottom</button>
+    </div>
+
+    <div class="feedback" id="feedbackBox">Подсказки клиента будут появляться здесь…</div>
+  </div>
+
+  <script>
+    const socket = io();
+    const statusEl = document.getElementById('status');
+    const clientUrlEl = document.getElementById('clientUrl');
+    const feedbackBox = document.getElementById('feedbackBox');
+
+    let connected = false, codeValue = null, lastNorm = { nx:0.5, ny:0.5 };
+
+    function send(type, payload){ socket.emit('control:event', { code: codeValue, type, payload }); }
+    function norm(x,y){ return { nx: Math.max(0, Math.min(1, x/innerWidth)), ny: Math.max(0, Math.min(1, y/innerHeight)) }; }
+    function ripple(nx,ny){ const d=document.createElement('div'); d.className='ripple'; d.style.left=(nx*innerWidth)+'px'; d.style.top=(ny*innerHeight)+'px'; document.body.appendChild(d); setTimeout(()=>d.remove(),600); }
+    function logFeedback(text){ feedbackBox.textContent = text; }
+
+    document.getElementById('join').addEventListener('click', () => {
+      const code = document.getElementById('code').value.trim();
+      if (code.length !== 6) return alert('Введите 6-значный код');
+      codeValue = code;
+      socket.emit('guest:join', { code });
+      socket.once('guest:joined', () => {
+        connected = true;
+        statusEl.textContent = 'Подключено.';
+        send('pointerMode', { enabled: document.getElementById('pointerOnly').checked });
+      });
+      socket.once('guest:error', (err) => statusEl.textContent = 'Ошибка: ' + (err.message || 'не удалось подключиться'));
+      socket.on('navigate:url', ({ url }) => clientUrlEl.textContent = url || 'неизвестно');
+      socket.on('session:stopped', () => { connected = false; statusEl.textContent = 'Сессия завершена хостом.'; });
+      socket.on('feedback:client', ({ kind, payload }) => {
+        if (kind === 'click') {
+          logFeedback('Клиент кликнул' + (payload.id ? (' · anchor='+payload.id) : ''));
+          if (typeof payload.nx==='number' && typeof payload.ny==='number') ripple(payload.nx, payload.ny);
+        } else if (kind === 'focus') {
+          logFeedback('Фокус у клиента' + (payload.id ? (' · anchor='+payload.id) : ''));
+        } else if (kind === 'scroll') {
+          logFeedback('Клиент прокрутил страницу (ry=' + Number(payload.ry).toFixed(2) + ')');
+        }
+      });
+    });
+
+    // Pointer toggle
+    document.getElementById('pointerOnly').addEventListener('change', (e)=> { if (connected) send('pointerMode', { enabled: e.target.checked }); });
+    // Jump to anchor
+    document.getElementById('goAnchor').addEventListener('click', ()=> { if (connected){ const id = document.getElementById('anchorId').value.trim(); if (id) send('jumpTo', { id }); } });
+
+    // Cursor / click / keyboard / wheel
+    window.addEventListener('mousemove', (e)=> { if (connected){ lastNorm = norm(e.clientX, e.clientY); send('cursor', lastNorm); } });
+    window.addEventListener('click', ()=> { if (connected) send('click', lastNorm); });
+    window.addEventListener('keydown', (e)=> {
+      if (!connected) return;
+      if (e.key && e.key.length >= 1) send('key', { key: e.key });
+      const map = { 'PageUp':'pageUp', 'PageDown':'pageDown', 'ArrowUp':'lineUp', 'ArrowDown':'lineDown', 'Home':'top', 'End':'bottom' };
+      if (map[e.key]) { send('scrollCmd', { cmd: map[e.key] }); e.preventDefault(); }
+    });
+    window.addEventListener('wheel', (e)=> { if (connected){ send('wheelDelta', { dy: Math.sign(e.deltaY) * Math.max(60, Math.abs(e.deltaY)) }); e.preventDefault(); } }, { passive:false });
+  </script>
+</body>
+</html>

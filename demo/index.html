@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <title>OKO · Локальный одностраничник</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="/public/sdk.js"></script>
+  <script src="/public/oko-widget.js" data-site-name="Локальный тест"></script>
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif; line-height:1.5; margin:0;}
+    header{padding:16px;background:#f4f4f4;border-bottom:1px solid #e5e5e5;}
+    main{max-width:900px;margin:24px auto;padding:0 16px;}
+    .card{padding:16px;border:1px solid #eee;border-radius:10px;margin-bottom:16px;}
+    .btn{padding:10px 16px;border-radius:8px;border:1px solid #222;background:#111;color:#fff;cursor:pointer;}
+    .muted{color:#666;font-size:14px;}
+    .long{height:900px;}
+  </style>
+</head>
+<body>
+  <header><strong>OKO · Локальный одностраничник</strong></header>
+  <main>
+    <h1>Проверка «в два браузера»</h1>
+    <p class="muted">В правом нижнем углу кнопка «Помощь на странице». При клике появится модалка с кодом.</p>
+
+    <div class="card" data-oko-id="hero">
+      <h3>Герой-блок</h3>
+      <p>Кликните кнопку и попросите оператора перейти к якорю <code>form</code>.</p>
+      <button class="btn" data-oko-id="hero-cta">Промо-кнопка</button>
+    </div>
+
+    <div class="card long"></div>
+
+    <div class="card" data-oko-id="form">
+      <h3>Форма заказа</h3>
+      <label>Название обоев:</label><br>
+      <input type="text" placeholder="Grasscloth 1087" data-mask data-oko-id="title"><br><br>
+      <label>Количество:</label><br>
+      <input type="number" value="1" min="1" max="999" data-oko-id="qty"><br><br>
+      <button class="btn" data-oko-id="cart">В корзину</button>
+    </div>
+
+    <div class="card long"></div>
+
+    <div class="card" data-oko-id="footer">
+      <h3>Подвал</h3>
+      <p>Контакты, политика.</p>
+    </div>
+  </main>
+</body>
+</html>

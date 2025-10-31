@@ -1,0 +1,9 @@
+<!-- Необязательно: если хотите свою кнопку в конкретном месте -->
+<button id="okoStart" class="btn btn-dark">Помощь на странице</button>
+<script>
+  document.getElementById('okoStart').addEventListener('click', async function(){
+    if (!window.Oko || !window.Oko.startSession) { alert('OKO не загружен'); return; }
+    const session = await window.Oko.startSession({ maskSelectors: ['[data-mask]','input[type=password]','[data-oko-mask]'] });
+    alert('Код для оператора: ' + session.code);
+  });
+</script>
