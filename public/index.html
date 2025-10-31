@@ -3,26 +3,35 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Pokazon · Помощь на странице</title>
-  <link rel="stylesheet" href="/assets/landing.css">
+  <title>Помощь на странице · pokazon.ru</title>
+  <link rel="stylesheet" href="/assets/home.css">
 </head>
 <body>
   <div class="wrap">
-    <span class="badge">Pokazon · co-browsing</span>
-    <h1>Помощь на странице для интернет‑магазинов</h1>
-    <p class="lead">Сотрудник управляет сайтом вместе с клиентом: указывает курсором, кликает, вводит текст и синхронно прокручивает. Без демонстрации полного экрана, только в пределах текущей страницы.</p>
+    <h1>Помощь на странице · <b>pokazon.ru</b></h1>
+    <p class="lead">Подключайте онлайн‑консультанта к странице клиента по одноразовому коду. Безопасно: доступ только к текущей странице. Кнопка «Остановить» всегда под рукой.</p>
 
-    <div class="card">
-      <p><b>Как это выглядит?</b> Откройте демо с двумя окнами (оператор ↔ клиент) и повторите шаги подключения по коду.</p>
-      <div class="row">
-        <a class="btn" href="/demo/">Открыть демо</a>
+    <div class="actions">
+      <a class="btn primary" href="/demo/">Попробовать демо</a>
+      <a class="btn secondary" href="/docs/">Как подключить</a>
+    </div>
+
+    <div class="grid">
+      <div class="panel">
+        <h3>Клиент — мини‑окно (#help)</h3>
+        <div class="frame-box">
+          <iframe src="/mini/client.html" title="client-mini"></iframe>
+        </div>
       </div>
-      <small>На демо плавающих кнопок нет по умолчанию — панели открываются встраиваемыми окнами.</small>
+      <div class="panel">
+        <h3>Оператор — мини‑окно (#operator)</h3>
+        <div class="frame-box">
+          <iframe src="/mini/operator.html" title="operator-mini"></iframe>
+        </div>
+      </div>
     </div>
 
-    <div class="footer">
-      Свернуть/развернуть панель оператора — <span class="kbd">Ctrl</span>+<span class="kbd">Alt</span>+<span class="kbd">O</span>. Бренд: Pokazon.
-    </div>
+    <p class="footer">© pokazon.ru · Сервис «Помощь на странице» · Вопросы: support@pokazon.ru</p>
   </div>
 </body>
 </html>
