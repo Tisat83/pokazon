@@ -46,7 +46,7 @@
       const dock=document.createElement('div'); dock.className='oko-op-dock'; dock.style.display='none';
       dock.innerHTML=`
         <div class="oko-op-hd">
-          <div>OKO · Панель оператора</div>
+          <div>Pokazon · Панель оператора</div>
           <div style="display:flex;gap:6px;align-items:center">
             <button id="okoOpAutoJoin" class="oko-op-joinhint" title="Автовход по коду">Автовход</button>
             <button id="okoOpClose" style="background:transparent;border:0;color:#e2e8f0;font-size:18px;cursor:pointer">×</button>

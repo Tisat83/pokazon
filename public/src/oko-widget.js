@@ -54,7 +54,7 @@
         const modal=document.createElement('div'); modal.className='oko-modal';
         modal.innerHTML=`
           <div class="oko-card">
-            <div class="oko-title">Помощь от Мособои</div>
+            <div class="oko-title">Помощь от Pokazon</div>
             <div class="oko-muted">Продиктуйте код сотруднику или отправьте код:</div>
             <div class="oko-code" id="oko-code">••••••</div>
             <div class="oko-muted">Нажмите на код, чтобы скопировать его.</div>
