@@ -1,14 +1,16 @@
 <!doctype html>
-<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>mini client</title>
-<style>body{margin:0;font:14px system-ui,Segoe UI,Roboto,Arial,sans-serif} .bar{position:fixed;left:10px;bottom:10px;z-index:10}
-.note{position:absolute;top:6px;left:8px;color:#64748b;font-size:12px}</style>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>mini client</title>
+  <style>html,body{height:100%}body{margin:0;font:14px system-ui,Segoe UI,Roboto,Arial,sans-serif}</style>
+  <script>
+    // ВАЖНО: устанавливаем #help ДО загрузки лоадера
+    if (location.hash !== '#help') { location.replace(location.pathname + '#help'); }
+  </script>
+  <script defer src="/src/oko-loader.js?mode=dev"></script>
 </head>
 <body>
-  <div class="note">Клиент: нажмите «Подключить», появится код</div>
-  <script defer src="/src/oko-loader.js?mode=dev"></script>
-  <script>
-    // переключим на #help, если вошли прямой ссылкой без хэша
-    if(location.hash !== '#help'){ location.hash = '#help'; }
-  </script>
-</body></html>
+</body>
+</html>
