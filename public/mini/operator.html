@@ -12,14 +12,14 @@
     }
   </script>
 
-  <!-- ВКЛЮЧАЕМ режим: только оператор -->
+  <!-- Только оператор -->
   <script>window.POKAZON_ONLY = 'operator';</script>
 
-  <!-- Лоадер (добавил версию, чтобы обойти кэш) -->
+  <!-- Лоадер -->
   <script defer src="/src/oko-loader.js?v=embed2"></script>
 </head>
 <body>
-  <!-- Для отдельной операторской страницы mini-compact НЕ НУЖЕН -->
-  <!-- Если он был только ради отступов – вернём стилями в CSS -->
+  <!-- Урезаем панель (только для этой страницы) -->
+  <script defer src="/mini/mini-operator-compact.js?v=1"></script>
 </body>
 </html>
