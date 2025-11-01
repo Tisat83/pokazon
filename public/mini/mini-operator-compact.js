@@ -1,94 +1,73 @@
-<script>
-/**
- * Мини-оператор: оставить только поле ввода кода, кнопку «Войти» и «Лог».
- * Остальное скрываем/удаляем только на этой странице.
- */
+// public/mini/mini-operator-compact.js
 (function () {
-  function shrinkOnce(root) {
+  // Какие подписи оставить на кнопках
+  var KEEP_BTNS = ['Войти', 'Лог'];
+
+  function text(el) { return (el && (el.textContent || el.value || '')).trim(); }
+
+  function hide(el) { if (!el) return; el.style.display = 'none'; }
+
+  function closestBlock(el) {
+    // Пытаемся скрывать не только сам input/checkbox, но и ближайший контейнер
+    return (el.closest('label') || el.closest('.row') || el.closest('div') || el);
+  }
+
+  function shrink(root) {
     if (!root) return;
 
-    // 1) Секции/группы, которые можно скрыть целиком
-    const selectorsToHide = [
-      // чекбоксы и секция с ними
-      'label:has(input[type="checkbox"])',
-      // кнопки навигации и прокрутки
-      'button:has(svg)', // стрелки ▲ ▼
-      'button:contains("PgUp")',
-      'button:contains("PgDn")',
-      'button:contains("Top")',
-      'button:contains("Bottom")',
-      // «Подогнать», «Автоподгон», «Сброс», «Окно W×H»
-      'button:contains("Подогнать")',
-      'button:contains("Автоподгон")',
-      'button:contains("Сброс")',
-      'button:contains("Окно W×H")',
-      // поле «Якорь» + «Перейти»
-      'input[placeholder], select, textarea',
-      'button:contains("Перейти")',
-      // любые подсказки/строки статуса, кроме «Лог»
-      '.oko-status, .oko-hint'
-    ];
-
-    // В Safari нет :contains в CSS, поэтому чистим ещё и через JS по тексту.
-    function matchByText(el, words) {
-      const t = (el.textContent || '').trim();
-      return words.some(w => t === w || t.indexOf(w) !== -1);
-    }
-
-    // Кнопки, которые нужно оставить
-    const shouldKeepButton = (btn) => {
-      const keep = ['Войти', 'Лог'];
-      return matchByText(btn, keep);
-    };
-
-    // Сначала удаляем/прячем известные блоки
-    selectorsToHide.forEach(sel => {
-      // поддержка :contains для хрома/фаерфокс через JS
-      if (sel.includes(':contains')) return;
-      root.querySelectorAll(sel).forEach(el => el.style.display = 'none');
+    // 1) Прячем ВСЕ кнопки, кроме "Войти" и "Лог"
+    root.querySelectorAll('button').forEach(function (btn) {
+      var t = text(btn);
+      if (KEEP_BTNS.indexOf(t) === -1) hide(btn);
     });
 
-    // По тексту: убираем всё, кроме «Войти» и «Лог»
-    root.querySelectorAll('button').forEach(btn => {
-      if (!shouldKeepButton(btn)) btn.style.display = 'none';
+    // 2) Прячем все checkbox'ы и их обёртки
+    root.querySelectorAll('input[type="checkbox"]').forEach(function (cb) {
+      hide(closestBlock(cb));
     });
 
-    // Секция «Экран клиента», «Твой экран» — тоже скрыть, если они есть
-    Array.from(root.querySelectorAll('*')).forEach(el => {
-      const t = (el.textContent || '').trim();
-      if (['Экран клиента:', 'Твой экран:'].some(x => t.startsWith(x))) {
-        el.style.display = 'none';
+    // 3) Прячем все поля ввода, кроме "Код (6 цифр)"
+    root.querySelectorAll('input,select,textarea').forEach(function (inp) {
+      if (inp.type === 'checkbox') return; // уже спрятаны
+      var ph = (inp.getAttribute('placeholder') || '').toLowerCase();
+      if (/код/.test(ph)) return; // оставить поле кода
+      hide(closestBlock(inp));
+    });
+
+    // 4) Убираем всё, где подпись про экраны/подгон/навигацию
+    Array.prototype.slice.call(root.querySelectorAll('*')).forEach(function (el) {
+      var t = text(el);
+      if (!t) return;
+      if (
+        t.indexOf('Экран клиента') === 0 ||
+        t.indexOf('Твой экран') === 0 ||
+        t.indexOf('Подогнать') === 0 ||
+        t.indexOf('Автоподгон') === 0 ||
+        t.indexOf('Окно W×H') === 0 ||
+        t.indexOf('PgUp') === 0 ||
+        t.indexOf('PgDn') === 0 ||
+        t === 'Top' || t === 'Bottom' ||
+        t.indexOf('Якорь') === 0 || t.indexOf('Перейти') === 0
+      ) {
+        hide(el.closest('div') || el);
       }
     });
   }
 
-  // Ищем корень панели
-  function findPanel() {
-    // пробуем по заголовку/классу
-    const byTitle = Array.from(document.querySelectorAll('div,section,article'))
-      .find(el => (el.textContent || '').includes('Панель оператора'));
+  function findPanelRoot() {
+    // модалка/панель оператора — ищем по типовым признакам
+    var byTitle = Array.prototype.slice.call(document.querySelectorAll('div,section,article'))
+      .find(function (el) { return /Панель оператора/.test(text(el)); });
     if (byTitle) return byTitle.closest('div') || byTitle;
 
-    // fallback — первая модалка (если менялась разметка)
-    return document.querySelector('.oko-operator, .oko-modal, .oko-panel');
+    return document.querySelector('.oko-operator, .oko-modal, .oko-panel') || document.body;
   }
 
-  function shrinkLoop() {
-    const root = findPanel();
-    if (root) shrinkOnce(root);
-  }
+  function run() { shrink(findPanelRoot()); }
 
-  // старт и несколько повторов + наблюдатель
-  const run = () => { shrinkLoop(); };
-  run();
-  setTimeout(run, 100);
-  setTimeout(run, 300);
-  setTimeout(run, 800);
-  setTimeout(run, 1500);
-
-  const mo = new MutationObserver(run);
+  // Несколько прогонов + наблюдатель, чтобы перекрыть позднюю отрисовку
+  run(); setTimeout(run, 100); setTimeout(run, 300); setTimeout(run, 800); setTimeout(run, 1500);
+  var mo = new MutationObserver(run);
   mo.observe(document.documentElement, { childList: true, subtree: true });
-  // через 3 секунды отключим наблюдатель (достаточно)
-  setTimeout(() => { try { mo.disconnect(); } catch(e){} }, 3000);
+  setTimeout(function(){ try { mo.disconnect(); } catch(e){} }, 3000);
 })();
-</script>
