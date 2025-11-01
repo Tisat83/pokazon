@@ -21,5 +21,76 @@
 <body>
   <!-- Урезаем панель (только для этой страницы) -->
   <script defer src="/mini/mini-operator-compact.js?v=5"></script>
+  <!-- compact tweaks: only for mini/operator.html -->
+<style>
+  /* компактная панель */
+  .oko--mini-compact { max-width: 420px; }
+  /* убрать заголовки/титлы, если встречаются */
+  .oko--mini-compact .oko-title,
+  .oko--mini-compact .oko-header .title { display: none !important; }
+  /* убрать кнопку Лог (на всякий случай и по классу, и по тексту) */
+  .oko--mini-compact .oko-log-btn { display: none !important; }
+  /* сворачивание */
+  .oko--mini-compact.minimized .oko-body { display: none !important; }
+  /* кнопка сворачивания */
+  .oko-min-btn{
+    margin-left:auto; width:32px; height:28px; line-height:26px;
+    border-radius:8px; border:1px solid rgba(255,255,255,.25);
+    background:#0b0f1a; color:#fff; cursor:pointer;
+  }
+</style>
+<script>
+(function(){
+  // применяем ТОЛЬКО если мини-оператор (#operator)
+  if ((location.hash||'').toLowerCase().indexOf('#operator') !== 0) return;
+
+  // находим панель, когда она появится
+  function waitPanel(cb){
+    var t = setInterval(function(){
+      var p = document.querySelector('[data-oko-role="operator-panel"]')
+           || document.querySelector('.oko-operator')
+           || document.querySelector('.oko-op')
+           || document.querySelector('.oko-panel')
+           || document.querySelector('div[class*="operator"][class*="panel"]');
+      if (p){ clearInterval(t); cb(p); }
+    }, 50);
+    setTimeout(function(){ clearInterval(t); }, 8000);
+  }
+
+  function makeCompact(panel){
+    if (panel.classList.contains('oko--mini-compact')) return;
+    panel.classList.add('oko--mini-compact');
+
+    // убрать кнопку "Лог" даже если без класса
+    Array.from(panel.querySelectorAll('button,a')).forEach(function(el){
+      var txt=(el.textContent||'').trim();
+      if (txt === 'Лог') el.remove();
+    });
+
+    // добавить кнопку "–" (свернуть)
+    var header = panel.querySelector('.oko-header') || panel.firstElementChild;
+    if (header && !header.querySelector('.oko-min-btn')){
+      var btn = document.createElement('button');
+      btn.className = 'oko-min-btn';
+      btn.type = 'button';
+      btn.title = 'Свернуть';
+      btn.textContent = '–';
+      btn.onclick = function(){ panel.classList.toggle('minimized'); };
+      header.appendChild(btn);
+    }
+  }
+
+  // одна попытка + страховка через MutationObserver
+  waitPanel(makeCompact);
+  new MutationObserver(function(){
+    var p = document.querySelector('[data-oko-role="operator-panel"]')
+          || document.querySelector('.oko-operator')
+          || document.querySelector('.oko-op')
+          || document.querySelector('.oko-panel');
+    if (p) makeCompact(p);
+  }).observe(document.documentElement, {childList:true, subtree:true});
+})();
+</script>
+
 </body>
 </html>

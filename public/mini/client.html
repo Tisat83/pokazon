@@ -18,5 +18,32 @@
 </head>
 <body>
   <script defer src="/mini/mini-compact.js?v=5"></script>
+  <!-- compact tweaks: only for mini/client.html -->
+<style>
+  /* убрать заголовок в модалке кода */
+  .oko-modal h2, .oko-help h2, .oko-help .title { display:none !important; }
+  /* длинный фон с прокруткой */
+  .demo-scroll{
+    min-height: 2200px;
+    background-image: url('/assets/screen2.jpg');
+    background-repeat: repeat-y;
+    background-size: 100% auto;
+    background-position: top left;
+  }
+  body{ overflow:auto; }
+</style>
+<script>
+(function(){
+  if ((location.hash||'').toLowerCase().indexOf('#help') !== 0) return;
+
+  // добавим длинный фон один раз
+  if (!document.querySelector('.demo-scroll')) {
+    var wrap = document.createElement('div');
+    wrap.className = 'demo-scroll';
+    document.body.prepend(wrap);
+  }
+})();
+</script>
+
 </body>
 </html>
