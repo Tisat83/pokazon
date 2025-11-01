@@ -4,13 +4,22 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>mini operator</title>
+
   <script>
     window.POKAZON_EMBED = true;
-    if (location.hash !== '#operator') { location.replace(location.pathname + '#operator'); }
+    if (location.hash !== '#operator') {
+      location.replace(location.pathname + '#operator');
+    }
   </script>
-  <script defer src="/src/oko-loader.js?v=embed1"></script>
+
+  <!-- ВКЛЮЧАЕМ режим: только оператор -->
+  <script>window.POKAZON_ONLY = 'operator';</script>
+
+  <!-- Лоадер (добавил версию, чтобы обойти кэш) -->
+  <script defer src="/src/oko-loader.js?v=embed2"></script>
 </head>
 <body>
-<script defer src="/mini/mini-compact.js?v=3"></script>
+  <!-- Для отдельной операторской страницы mini-compact НЕ НУЖЕН -->
+  <!-- Если он был только ради отступов – вернём стилями в CSS -->
 </body>
 </html>
