@@ -1,57 +1,78 @@
-/* mini-compact.js — компакт для мини-демо на главной pokazon.ru */
+<script>
+/* Мини-правки только для demo-страниц (#help / #operator) */
 (function () {
-  function log() {
-    try { console.debug('[mini-compact]', ...arguments); } catch (e) {}
-  }
+  function onReady(cb){ if(document.readyState!=='loading'){cb()} else {document.addEventListener('DOMContentLoaded',cb)} }
+  function qs(s,root){ return (root||document).querySelector(s) }
+  function qsa(s,root){ return (root||document).querySelectorAll(s) }
 
-  function whenReady(cb) {
-    if (document.readyState === 'complete' || document.readyState === 'interactive') {
-      setTimeout(cb, 0);
-    } else {
-      window.addEventListener('DOMContentLoaded', cb, { once: true });
-      window.addEventListener('load', cb, { once: true });
-    }
-  }
+  /* === ОПЕРАТОР: компактная панель === */
+  function compactOperator(){
+    var panel = qs('.oko-operator, .oko-op, [data-oko-role="operator-panel"]');
+    if(!panel) return;
 
-  function hideByText(root, texts) {
-    var nodes = root.querySelectorAll('button, a, label, div, span, p, section, fieldset');
-    nodes.forEach(function (el) {
-      var t = (el.textContent || '').replace(/\s+/g, ' ').trim();
-      if (!t) return;
-      if (texts.some(function (s) { return t.indexOf(s) !== -1; })) {
-        el.style.display = 'none';
-      }
+    // стилевые твики только для мини-версии
+    var css = `
+      .oko--mini-compact{max-width:420px}
+      .oko--mini-compact .oko-log-btn,
+      .oko--mini-compact button, .oko--mini-compact a{ /* общий селектор дальше переопределим нужные */ }
+      .oko--mini-compact .oko-header .title,
+      .oko--mini-compact .oko-title { display:none !important; }
+      .oko--mini-compact.minimized .oko-body{ display:none !important; }
+      .oko--mini-compact.minimized { width:420px; }
+    `;
+    var st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
+    panel.classList.add('oko--mini-compact');
+
+    // убрать кнопку «Лог»
+    qsa('button, a', panel).forEach(function(b){
+      var t=(b.textContent||'').trim();
+      if(t === 'Лог'){ b.remove(); }
     });
-  }
 
-  function isOperator() { return location.hash.indexOf('operator') !== -1; }
-  function isHelp()     { return location.hash.indexOf('help') !== -1; }
+    // заголовок спрячем (если остался какой-то текст)
+    qsa('.oko-header .title, .oko-title, h3', panel).forEach(function(el){ el.remove(); });
 
-  function apply() {
-    if (isHelp()) {
-      // Клиент: спрятать кнопку «ОКО Оператор» и саму панель, если вдруг появилась
-      hideByText(document, ['ОКО Оператор', 'ОКО · Панель оператора']);
-    }
-    if (isOperator()) {
-      // Оператор: оставить только поле кода, «Войти» и «Лог»
-      hideByText(document, [
-        'Только указка', 'Синхронная прокрутка',
-        'Подогнать', 'Автоподгон', 'Сброс',
-        'Окно W×H', 'Окно WxH', 'Якорь',
-        'PgUp', 'PgDn', 'Top', 'Bottom', '▲', '▼'
-      ]);
-      try { document.body.style.setProperty('--oko-panel-scale', '0.95'); } catch(e){}
+    // добавить кнопку «свернуть» в шапку
+    var header = qs('.oko-header, .oko-head, .oko-title-bar', panel);
+    if(header && !qs('.oko-min-btn', header)){
+      var minBtn = document.createElement('button');
+      minBtn.className = 'oko-min-btn';
+      minBtn.type='button';
+      minBtn.title='Свернуть';
+      minBtn.textContent = '–';
+      minBtn.style.cssText = 'margin-left:auto; width:32px; height:28px; border-radius:8px; line-height:26px;';
+      minBtn.addEventListener('click', function(){ panel.classList.toggle('minimized'); });
+      header.appendChild(minBtn);
     }
   }
 
-  function observeThenApply() {
-    // На демо панель может появиться чуть позже — наблюдаем за DOM 2 сек
-    var mo = new MutationObserver(function () { apply(); });
-    mo.observe(document.documentElement, { childList: true, subtree: true });
-    setTimeout(function () { try { mo.disconnect(); } catch(e){} }, 2000);
-    apply();
+  /* === КЛИЕНТ: убрать заголовок в модалке и показать скролл-фон === */
+  function compactClient(){
+    // убрать «Помощь …» в окне кода
+    qsa('.oko-modal h2, .oko-help h2').forEach(function(h){ h.remove(); });
+
+    // добавить «длинный» фон с прокруткой (две копии картинки подряд)
+    if(!qs('.demo-scroll')){
+      var wrap = document.createElement('div');
+      wrap.className = 'demo-scroll';
+      wrap.innerHTML =
+        '<img src="/assets/screen2.jpg" alt="" style="display:block;width:100%;">' +
+        '<img src="/assets/screen2.jpg" alt="" style="display:block;width:100%;">';
+      document.body.prepend(wrap);
+
+      var st = document.createElement('style');
+      st.textContent = `
+        body{overflow:auto;}
+        .demo-scroll{position:relative}
+      `;
+      document.head.appendChild(st);
+    }
   }
 
-  log('loaded', location.pathname + location.hash);
-  whenReady(observeThenApply);
+  onReady(function(){
+    var hash = (location.hash||'').toLowerCase();
+    if(hash.indexOf('#operator')===0){ compactOperator(); }
+    if(hash.indexOf('#help')===0){ compactClient(); }
+  });
 })();
+</script>
