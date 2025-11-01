@@ -3,94 +3,51 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>mini operator</title>
-
+  <title>mini operator • pokazon</title>
   <script>
     window.POKAZON_EMBED = true;
-    if (location.hash !== '#operator') {
-      location.replace(location.pathname + '#operator');
-    }
+    window.POKAZON_ONLY  = 'operator';
+    if (location.hash !== '#operator') { location.replace(location.pathname + '#operator'); }
   </script>
-
-  <!-- Только оператор -->
-  <script>window.POKAZON_ONLY = 'operator';</script>
-
-  <!-- Лоадер -->
   <script defer src="/src/oko-loader.js?v=embed3"></script>
+  <style>
+    .oko-mini-collapsed .oko-panel-body,
+    .oko-mini-collapsed .oko-panel__body,
+    .oko-mini-collapsed .oko-body { display:none !important; }
+    .oko-mini-collapse-btn{
+      border:none;border-radius:.5rem;padding:.15rem .5rem;cursor:pointer;
+      font-size:16px;line-height:1;background:#111827;color:#fff;margin-left:auto;
+    }
+  </style>
 </head>
 <body>
-  <!-- Урезаем панель (только для этой страницы) -->
-  <script defer src="/mini/mini-operator-compact.js?v=5"></script>
-  <!-- compact tweaks: only for mini/operator.html -->
-<style>
-  /* компактная панель */
-  .oko--mini-compact { max-width: 420px; }
-  /* убрать заголовки/титлы, если встречаются */
-  .oko--mini-compact .oko-title,
-  .oko--mini-compact .oko-header .title { display: none !important; }
-  /* убрать кнопку Лог (на всякий случай и по классу, и по тексту) */
-  .oko--mini-compact .oko-log-btn { display: none !important; }
-  /* сворачивание */
-  .oko--mini-compact.minimized .oko-body { display: none !important; }
-  /* кнопка сворачивания */
-  .oko-min-btn{
-    margin-left:auto; width:32px; height:28px; line-height:26px;
-    border-radius:8px; border:1px solid rgba(255,255,255,.25);
-    background:#0b0f1a; color:#fff; cursor:pointer;
-  }
-</style>
-<script>
-(function(){
-  // применяем ТОЛЬКО если мини-оператор (#operator)
-  if ((location.hash||'').toLowerCase().indexOf('#operator') !== 0) return;
+  <script>
+    (function compactOperator(){
+      function run(){
+        // remove "Лог"
+        document.querySelectorAll('button, a').forEach(el=>{
+          const t=(el.textContent||'').trim();
+          if (t==='Лог') el.remove();
+        });
+        const panel=document.querySelector('.oko-panel,.oko-operator,.oko-operator-panel,[role="dialog"]');
+        if(!panel) return;
+        const header=panel.querySelector('.oko-panel-head,.oko-head,header,.oko-panel__header,.oko-header')||panel.firstElementChild;
+        if(!header) return;
+        if(header.querySelector('.oko-mini-collapse-btn')) return;
+        const btn=document.createElement('button');
+        btn.className='oko-mini-collapse-btn';
+        btn.type='button';
+        btn.title='Свернуть/развернуть';
+        btn.textContent='–';
+        btn.addEventListener('click',()=>{ panel.classList.toggle('oko-mini-collapsed'); });
+        header.appendChild(btn);
+      }
+      const mo=new MutationObserver(run);
+      mo.observe(document.documentElement,{childList:true,subtree:true});
+      run();
+    })();
+  </script>
 
-  // находим панель, когда она появится
-  function waitPanel(cb){
-    var t = setInterval(function(){
-      var p = document.querySelector('[data-oko-role="operator-panel"]')
-           || document.querySelector('.oko-operator')
-           || document.querySelector('.oko-op')
-           || document.querySelector('.oko-panel')
-           || document.querySelector('div[class*="operator"][class*="panel"]');
-      if (p){ clearInterval(t); cb(p); }
-    }, 50);
-    setTimeout(function(){ clearInterval(t); }, 8000);
-  }
-
-  function makeCompact(panel){
-    if (panel.classList.contains('oko--mini-compact')) return;
-    panel.classList.add('oko--mini-compact');
-
-    // убрать кнопку "Лог" даже если без класса
-    Array.from(panel.querySelectorAll('button,a')).forEach(function(el){
-      var txt=(el.textContent||'').trim();
-      if (txt === 'Лог') el.remove();
-    });
-
-    // добавить кнопку "–" (свернуть)
-    var header = panel.querySelector('.oko-header') || panel.firstElementChild;
-    if (header && !header.querySelector('.oko-min-btn')){
-      var btn = document.createElement('button');
-      btn.className = 'oko-min-btn';
-      btn.type = 'button';
-      btn.title = 'Свернуть';
-      btn.textContent = '–';
-      btn.onclick = function(){ panel.classList.toggle('minimized'); };
-      header.appendChild(btn);
-    }
-  }
-
-  // одна попытка + страховка через MutationObserver
-  waitPanel(makeCompact);
-  new MutationObserver(function(){
-    var p = document.querySelector('[data-oko-role="operator-panel"]')
-          || document.querySelector('.oko-operator')
-          || document.querySelector('.oko-op')
-          || document.querySelector('.oko-panel');
-    if (p) makeCompact(p);
-  }).observe(document.documentElement, {childList:true, subtree:true});
-})();
-</script>
-
+  <script defer src="/mini/mini-compact.js?v=5"></script>
 </body>
 </html>

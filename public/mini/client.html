@@ -3,47 +3,53 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>mini client</title>
-
+  <title>mini client • pokazon</title>
+  <style>
+    html,body{height:100%;margin:0}
+    .demo-scroll{
+      min-height:2200px;
+      background: url('/assets/screen2.jpg') center top / cover repeat-y;
+    }
+  </style>
   <script>
     window.POKAZON_EMBED = true;
+    window.POKAZON_ONLY  = 'client';
     if (location.hash !== '#help') { location.replace(location.pathname + '#help'); }
   </script>
-
-  <!-- ВКЛЮЧАЕМ режим: только клиент -->
-  <script>window.POKAZON_ONLY = 'client';</script>
-
-  <!-- Лоадер -->
   <script defer src="/src/oko-loader.js?v=embed2"></script>
 </head>
 <body>
+  <div class="demo-scroll"></div>
+
+  <script>
+    (function nukeOperatorBtn(){
+      function kill(){
+        document.querySelectorAll('[data-oko="operator"],[data-oko-role="operator-toggle"],.oko-operator,#oko-operator')
+          .forEach(el => el.remove());
+        Array.from(document.querySelectorAll('button,a,div')).forEach(el=>{
+          const t=(el.textContent||'').trim();
+          if (t==='ОКО Оператор') el.remove();
+        });
+      }
+      kill();
+      const mo=new MutationObserver(kill);
+      mo.observe(document.documentElement,{childList:true,subtree:true});
+      setTimeout(()=>{ try{mo.disconnect()}catch(e){} },2000);
+    })();
+
+    (function hideClientHeader(){
+      function tryHide(){
+        const modal = document.querySelector('[data-oko-help-modal], .oko-help-modal, .oko-modal');
+        if (!modal) return;
+        const head = modal.querySelector('h1,h2,h3,header,.oko-modal__title,strong');
+        if (head) head.style.display = 'none';
+      }
+      document.addEventListener('pokazon:want-help', ()=>setTimeout(tryHide, 300));
+      const mo=new MutationObserver(tryHide);
+      mo.observe(document.documentElement,{childList:true,subtree:true});
+    })();
+  </script>
+
   <script defer src="/mini/mini-compact.js?v=5"></script>
-  <!-- compact tweaks: only for mini/client.html -->
-<style>
-  /* убрать заголовок в модалке кода */
-  .oko-modal h2, .oko-help h2, .oko-help .title { display:none !important; }
-  /* длинный фон с прокруткой */
-  .demo-scroll{
-    min-height: 2200px;
-    background-image: url('/assets/screen2.jpg');
-    background-repeat: repeat-y;
-    background-size: 100% auto;
-    background-position: top left;
-  }
-  body{ overflow:auto; }
-</style>
-<script>
-(function(){
-  if ((location.hash||'').toLowerCase().indexOf('#help') !== 0) return;
-
-  // добавим длинный фон один раз
-  if (!document.querySelector('.demo-scroll')) {
-    var wrap = document.createElement('div');
-    wrap.className = 'demo-scroll';
-    document.body.prepend(wrap);
-  }
-})();
-</script>
-
 </body>
 </html>
