@@ -6,96 +6,120 @@
   <title>mini operator</title>
 
   <script>
-    // режим встраивания и принудительный хеш
+    // Мини-режим для встраивания и принудительный хеш
     window.POKAZON_EMBED = true;
     window.POKAZON_ONLY  = 'operator';
     if (location.hash !== '#operator') { location.replace(location.pathname + '#operator'); }
   </script>
 
-  <!-- лоадер (новый cache-bust) -->
-  <script defer src="/src/oko-loader.js?v=embed4"></script>
+  <!-- лоадер (с кастованием кэша) -->
+  <script defer src="/src/oko-loader.js?v=embed5"></script>
 
   <style>
-    /* немного ужмём панель визуально */
-    .oko-mini-compact .oko-panel,
-    .oko-mini-compact [class*="panel"][class*="oko"] {
+    /* Узкая панель в мини-версии */
+    html.oko-mini-compact .oko-panel,
+    html.oko-mini-compact [class*="panel"][class*="оператора"] {
       max-width: 420px !important;
     }
+    /* Свернутый режим: оставляем только шапку */
+    .oko-mini-collapsed .oko-mini-body { display: none !important; }
+    /* На всякий случай: скрыть лог по селекторам и по тексту */
+    .oko-hide-log [data-oko-log],
+    .oko-hide-log .oko-log,
+    .oko-hide-log button.oko-log,
+    .oko-hide-log a.oko-log { display: none !important; }
   </style>
 </head>
 <body>
 
 <script>
-/* Мини-оператор: оставить только поле кода и кнопку «Войти» */
 (function () {
-  function compactify() {
-    // ищем контейнер панели по заголовку
+  // Универсальный помощник: текстовое совпадение (без регистра, обрезка пробелов)
+  function text(el){ return (el.textContent || '').replace(/\s+/g,' ').trim().toLowerCase(); }
+  function isBtn(el, label){
+    return (el.tagName==='BUTTON' || el.tagName==='A') && text(el)===label;
+  }
+
+  function compactOperatorPanel() {
+    // Найти контейнер панели по заголовку
     var panel = Array.from(document.querySelectorAll('div,section,aside'))
-      .find(function(n){ return /ОКО\s*·\s*Панель оператора/i.test(n.textContent || ''); });
+      .find(function (n) { return /око\s*·\s*панель оператора/i.test((n.textContent||'')); });
     if (!panel) return;
 
-    // пометим body — пригодится для CSS
     document.documentElement.classList.add('oko-mini-compact');
+    document.documentElement.classList.add('oko-hide-log');
 
-    // найдём необходимые элементы
-    var codeInput = Array.from(panel.querySelectorAll('input,textarea'))
-      .find(function(el){ return /код/i.test((el.placeholder || '')); });
-    var joinBtn = Array.from(panel.querySelectorAll('button, a'))
-      .find(function(el){ return /^войти$/i.test((el.textContent || '').trim()); });
+    // Выделим шапку и тело (создадим «тело», если явной обёртки нет)
+    var header = Array.from(panel.querySelectorAll('div,header,h1,h2,h3')).find(function(h){
+      return /панель оператора/i.test((h.textContent||''));
+    }) || panel;
+    var body = panel.querySelector('.oko-mini-body');
+    if (!body){
+      body = document.createElement('div');
+      body.className = 'oko-mini-body';
+      // Переместим всё содержимое, кроме шапки, в body
+      Array.from(panel.children).forEach(function(ch){
+        if (ch!==header) body.appendChild(ch);
+      });
+      panel.appendChild(body);
+    }
 
-    // если не нашли — выходим, подождём следующую мутацию
+    // Найти поле кода и кнопку «Войти»
+    var codeInput = Array.from(panel.querySelectorAll('input,textarea')).find(function(el){
+      return /код/.test((el.placeholder||'').toLowerCase());
+    });
+    var joinBtn = Array.from(panel.querySelectorAll('button, a')).find(function(el){
+      return /^войти$/.test(text(el));
+    });
+
+    // Если их пока нет — подождём следующую мутацию
     if (!codeInput || !joinBtn) return;
 
-    // прячем всё внутри панели, кроме заголовка, поля кода и кнопки «Войти»
-    Array.from(panel.querySelectorAll('*')).forEach(function(el){
+    // Скрыть всё лишнее внутри "body"
+    Array.from(body.querySelectorAll('*')).forEach(function(el){
       var keep =
-        el === codeInput ||
-        el === joinBtn ||
-        el.contains && (el.contains(codeInput) || el.contains(joinBtn)) ||
-        /панель оператора/i.test((el.textContent || ''));
+        el===codeInput ||
+        el===joinBtn ||
+        el.contains && (el.contains(codeInput) || el.contains(joinBtn));
+
+      // по текстам известных элементов – тоже прячем
+      var t = text(el);
+      if (/(только указка|синхронная прокрутка|подогнать|автоподгон|сброс|окно w×h|окно wxh|якорь|перейти|pgup|pgdn|top|bottom|лог)/i.test((el.textContent||''))) {
+        keep = false;
+      }
 
       if (!keep) {
         el.style.display = 'none';
+        el.setAttribute('data-mini-hidden','1');
       }
     });
 
-    // добавим в шапку «свернуть» (–)
-    var header = Array.from(panel.querySelectorAll('div,h1,h2,h3,header')).find(function(h){
-      return /панель оператора/i.test((h.textContent || ''));
-    });
-    if (header && !header.querySelector('[data-mini-collapse]')) {
-      var btn = document.createElement('button');
-      btn.textContent = '–';
-      btn.setAttribute('data-mini-collapse','');
-      btn.style.cssText = 'margin-left:auto; padding:4px 10px; border-radius:10px; cursor:pointer;';
-      btn.onclick = function(){
-        var body = panel; // сворачиваем всё, что под шапкой (мы уже всё скрыли, но оставим поведение)
-        if (body.getAttribute('data-collapsed') === '1') {
-          body.setAttribute('data-collapsed','0');
-          Array.from(panel.querySelectorAll('*')).forEach(function(el){
-            if (el.style && el.getAttribute('data-mini-hidden') === '1') el.style.display = '';
-          });
-        } else {
-          body.setAttribute('data-collapsed','1');
-          Array.from(panel.querySelectorAll('*')).forEach(function(el){
-            if (el === codeInput || el === joinBtn || el.contains(codeInput) || el.contains(joinBtn)) return;
-            if (el.style) { el.style.display = 'none'; el.setAttribute('data-mini-hidden','1'); }
-          });
-        }
-      };
+    // Добавить в шапку кнопку «–» (сворачивает body)
+    if (!header.querySelector('[data-mini-collapse]')) {
       header.style.display = 'flex';
       header.style.alignItems = 'center';
+
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = '–';
+      btn.title = 'Свернуть';
+      btn.setAttribute('data-mini-collapse','');
+      btn.style.cssText = 'margin-left:auto;padding:4px 10px;border-radius:10px;cursor:pointer;';
+      btn.onclick = function(){
+        panel.classList.toggle('oko-mini-collapsed');
+      };
       header.appendChild(btn);
     }
   }
 
-  // Пробуем сразу и подписываемся на мутации (панель отрисовывается асинхронно)
-  compactify();
-  var mo = new MutationObserver(function(){ compactify(); });
-  mo.observe(document.documentElement, { childList:true, subtree:true });
-  // на всякий случай ещё пара попыток
-  setTimeout(compactify, 400);
-  setTimeout(compactify, 1200);
+  // Запуск + наблюдатель, чтобы ловить асинхронный рендер
+  compactOperatorPanel();
+  var mo = new MutationObserver(compactOperatorPanel);
+  mo.observe(document.documentElement, {childList:true, subtree:true});
+  // несколько повторов на всякий случай
+  setTimeout(compactOperatorPanel, 300);
+  setTimeout(compactOperatorPanel, 800);
+  setTimeout(compactOperatorPanel, 1500);
 })();
 </script>
 
