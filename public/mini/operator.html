@@ -1,60 +1,32 @@
-<!doctype html>
-<html lang="ru">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>mini operator</title>
-
-  <!-- говорим лоадеру, что мы внутри iframe и нам нужен только оператор -->
-  <script>
-    window.POKAZON_EMBED = true;
-    window.POKAZON_ONLY  = 'operator';
-    if (location.hash !== '#operator') { location.replace(location.pathname + '#operator'); }
-  </script>
-
-  <!-- тянем лоадер (версию меняем для сброса кэша) -->
-  <script defer src="/src/oko-loader.js?v=embed6"></script>
-
-  <style>
-    /* чуть уже панель в мини-версии */
-    html.oko-mini-compact .oko-panel { max-width: 420px !important; }
-
-    /* свёрнутый вид: скрыть тело панели */
-    .oko-mini-collapsed .oko-mini-body { display: none !important; }
-
-    /* перестраховка: спрятать «Лог» по классам/атрибутам, если появится */
-    .oko-hide-log [data-oko-log],
-    .oko-hide-log .oko-log,
-    .oko-hide-log button.oko-log,
-    .oko-hide-log a.oko-log { display: none !important; }
-  </style>
-</head>
-<body>
-
 <script>
-/* Урезаем панель оператора до «Код + Войти». Держится и при перерисовке. */
 (function () {
-  const DEADLINE = Date.now() + 10000;  // до 10с ждём, пока виджет дорендерится
+  const DEADLINE = Date.now() + 10000;
 
-  function txt(el){ return (el.textContent||'').replace(/\s+/g,' ').trim().toLowerCase(); }
-  function is(el, label){ return (el.tagName==='BUTTON'||el.tagName==='A') && txt(el)===label; }
+  function norm(s){ return (s||'').toLowerCase().replace(/\s+/g,' ').trim(); }
+  function text(el){ return norm(el.textContent); }
 
   function shrink() {
-    // находим контейнер панели по заголовку
     const panel = Array.from(document.querySelectorAll('div,section,aside'))
       .find(n => /панель оператора/i.test((n.textContent||'')));
-    if (!panel) {
-      if (Date.now() < DEADLINE) requestAnimationFrame(shrink);
-      return;
-    }
+    if (!panel) { if (Date.now() < DEADLINE) requestAnimationFrame(shrink); return; }
 
     document.documentElement.classList.add('oko-mini-compact','oko-hide-log');
 
-    // выделим шапку и тело (создадим обёртку body при необходимости)
+    // найдём шапку
     const header =
       Array.from(panel.querySelectorAll('div,header,h1,h2,h3'))
         .find(h => /панель оператора/i.test((h.textContent||''))) || panel;
 
+    // убедимся, что «крестик» (закрыть) видим / справа
+    const closeBtn =
+      header.querySelector('button, a, .close, .oko-close') ||
+      panel.querySelector('button[aria-label="Close"], [data-oko-close]');
+    if (closeBtn) {
+      closeBtn.style.display = '';
+      closeBtn.style.marginLeft = 'auto';
+    }
+
+    // тело панели
     let body = panel.querySelector('.oko-mini-body');
     if (!body) {
       body = document.createElement('div');
@@ -63,64 +35,44 @@
       panel.appendChild(body);
     }
 
-    // найдём поле кода и кнопку «Войти»
+    // поле кода + «Войти»
     const codeInput = Array.from(panel.querySelectorAll('input,textarea'))
-      .find(el => /код/.test((el.placeholder||'').toLowerCase()));
+      .find(el => /код/.test(norm(el.placeholder)));
     const joinBtn = Array.from(panel.querySelectorAll('button, a'))
-      .find(el => /^войти$/.test(txt(el)));
+      .find(el => text(el)==='войти');
 
-    if (!codeInput || !joinBtn) {               // подождём, если ещё не дорендерилось
+    if (!codeInput || !joinBtn) {
       if (Date.now() < DEADLINE) requestAnimationFrame(shrink);
       return;
     }
 
-    // Спрятать всё лишнее внутри body
-    const hideTexts = [
+    // спрятать всё лишнее
+    const hideContains = [
       'только указка','синхронная прокрутка','подогнать','автоподгон','сброс',
-      'окно wxh','окно w×h','якорь','перейти','pgup','pgdn','top','bottom','лог'
+      'окно wxh','окно w×h','якорь','перейти','pgup','pgdn','top','bottom','лог',
+      'экран клиента','твой экран'     // ← добавили строки про экраны
     ];
 
     Array.from(body.querySelectorAll('*')).forEach(el => {
-      const keep =
-        el===codeInput || el===joinBtn ||
-        (el.contains && (el.contains(codeInput) || el.contains(joinBtn)));
-
+      const keep = el===codeInput || el===joinBtn ||
+                   (el.contains && (el.contains(codeInput)||el.contains(joinBtn)));
       if (keep) return;
 
-      const t = txt(el);
-      if (hideTexts.some(key => t.includes(key))) {
+      const t = text(el);
+      if (hideContains.some(key => t.includes(key))) {
         el.style.display = 'none';
         el.setAttribute('data-mini-hidden','1');
       }
     });
 
-    // Кнопка «–» в шапке (сворачивает/разворачивает тело)
-    if (!header.querySelector('[data-mini-collapse]')) {
-      header.style.display = 'flex';
-      header.style.alignItems = 'center';
-
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.textContent = '–';
-      btn.title = 'Свернуть панель';
-      btn.setAttribute('data-mini-collapse','');
-      btn.style.cssText = 'margin-left:auto;padding:4px 10px;border-radius:10px;cursor:pointer;';
-      btn.onclick = () => panel.classList.toggle('oko-mini-collapsed');
-      header.appendChild(btn);
-    }
-
-    // Следим за перерисовками — повторно «урезаем»
+    // следим за перерисовками
     const mo = new MutationObserver(() => shrink());
     mo.observe(panel, { childList:true, subtree:true });
   }
 
   window.addEventListener('load', shrink);
-  // пара доп.повторов на всякий случай
   setTimeout(shrink, 400);
   setTimeout(shrink, 1000);
   setTimeout(shrink, 2000);
 })();
 </script>
-
-</body>
-</html>
