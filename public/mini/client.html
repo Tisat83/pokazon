@@ -51,32 +51,46 @@
   <script defer src="/src/oko-loader.js?v=embed3"></script>
 </head>
 <body>
-  <div class="demo-scroll"></div>
+
+  <!-- единый скролл -->
+  <div class="demo-scroll">
+    <div class="stage">
+      <img class="shot" src="/assets/screen2.jpg" alt="demo">
+      <div class="spacer"></div>
+    </div>
+  </div>
 
   <script>
-    // у клиента лишний заголовок/кнопки мы уже чистили; тут только стиль
+    /* подстраховка: удалить кнопку «ОКО Оператор» если вдруг появится */
+    (function nukeOperatorBtn(){
+      function kill(){
+        document.querySelectorAll('[data-oko="operator"],[data-oko-role="operator-toggle"],.oko-operator,#oko-operator')
+          .forEach(el => el.remove());
+        document.querySelectorAll('button,a,div').forEach(el=>{
+          const t=(el.textContent||'').trim();
+          if (t==='ОКО Оператор') el.remove();
+        });
+      }
+      kill();
+      const mo=new MutationObserver(kill);
+      mo.observe(document.documentElement,{childList:true,subtree:true});
+      setTimeout(()=>{ try{mo.disconnect()}catch(e){} }, 2000);
+    })();
+
+    /* прячем заголовок внутри модалки клиента */
+    (function hideClientHeader(){
+      function tryHide(){
+        const modal = document.querySelector('[data-oko-help-modal], .oko-help-modal, .oko-modal');
+        if (!modal) return;
+        const head = modal.querySelector('h1,h2,h3,header,.oko-modal__title,strong');
+        if (head) head.style.display = 'none';
+      }
+      document.addEventListener('pokazon:want-help', ()=>setTimeout(tryHide, 300));
+      const mo=new MutationObserver(tryHide);
+      mo.observe(document.documentElement,{childList:true,subtree:true});
+    })();
   </script>
 
-  <style>
-    /* контейнер с вертикальным скроллом */
-    .demo-scroll{
-      width:100%;
-      height:calc(100vh - 20px);
-      overflow:auto;
-      background:#eee;
-    }
-    /* «полотно» с картинкой */
-    .demo-scroll::before{
-      content:"";
-      display:block;
-      width:100%;
-      height:1600px; /* сделать больше, чтобы был скролл */
-      background: url("/assets/screen2.jpg") 50% 0 / 1100px auto no-repeat;
-      /* при необходимости подгоняй размер/позицию */
-    }
-  </style>
-
-  <script defer src="/mini/mini-compact.js?v=3"></script>
+  <script defer src="/mini/mini-compact.js?v=8"></script>
 </body>
-
 </html>
