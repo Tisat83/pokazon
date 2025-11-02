@@ -5,10 +5,21 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>mini client • pokazon</title>
   <style>
-    html,body{height:100%;margin:0}
+    /* контейнер с вертикальным скроллом */
     .demo-scroll{
-      min-height:2200px;
-      background: url('/assets/screen2.jpg') center top / cover repeat-y;
+      width:100%;
+      height:calc(100vh - 20px);
+      overflow:auto;
+      background:#eee;
+    }
+    /* «полотно» с картинкой */
+    .demo-scroll::before{
+      content:"";
+      display:block;
+      width:100%;
+      height:1000px; /* сделать больше, чтобы был скролл */
+      background: url("/assets/screen2.jpg") 50% 0 / 1100px auto no-repeat;
+      /* при необходимости подгоняй размер/позицию */
     }
   </style>
   <script>
@@ -50,6 +61,6 @@
     })();
   </script>
 
-  <script defer src="/mini/mini-compact.js?v=5"></script>
+  <script defer src="/mini/mini-compact.js?v=6"></script>
 </body>
 </html>

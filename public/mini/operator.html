@@ -4,7 +4,24 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>mini operator</title>
-
+  <style>
+    /* контейнер с вертикальным скроллом */
+    .demo-scroll{
+      width:100%;
+      height:calc(100vh - 20px);
+      overflow:auto;
+      background:#eee;
+    }
+    /* «полотно» с картинкой */
+    .demo-scroll::before{
+      content:"";
+      display:block;
+      width:100%;
+      height:1000px; /* сделать больше, чтобы был скролл */
+      background: url("/assets/screen2.jpg") 50% 0 / 1100px auto no-repeat;
+      /* при необходимости подгоняй размер/позицию */
+    }
+  </style>
   <!-- говорим лоадеру, что мы внутри iframe и нам нужен только оператор -->
   <script>
     window.POKAZON_EMBED = true;
