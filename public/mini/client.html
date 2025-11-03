@@ -6,62 +6,76 @@
   <title>mini client • pokazon</title>
 
   <style>
-    /* страница не скроллится — скроллим только наш контейнер */
-    html, body { height: 100%; margin: 0; overflow: hidden; background:#f4f4f4; }
+    /* Сбрасываем любые фоновые картинки и делаем один скролл-контейнер */
+    html, body {
+      height: 100%;
+      margin: 0;
+      overflow: hidden;              /* скролл не на body */
+      background: #f6f7f9;
+      background-image: none !important;
+      background-repeat: no-repeat !important;
+      background-size: auto !important;
+    }
+    .demo-scroll, .stage, .shot {
+      background-image: none !important;
+    }
 
-    /* единственный скролл-контейнер на всю вкладку */
+    /* Единый скролл внутри страницы/фрейма */
     .demo-scroll {
-      position: fixed; inset: 0;
+      position: fixed;
+      inset: 0;
       overflow: auto;
       -webkit-overflow-scrolling: touch;
     }
 
-    /* «сцена»: фиксируем максимальную ширину скриншота */
+    /* Центровка контента, ограничение ширины */
     .stage {
       width: 100%;
-      max-width: 1100px;      /* ← хотите меньше/больше — меняйте число */
+      max-width: 1200px;
       margin: 24px auto 0;
       padding: 0 12px;
       box-sizing: border-box;
     }
 
-    /* сам скриншот */
+    /* Единственная картинка-скрин */
     .shot {
       display: block;
       width: 100%;
       height: auto;
       border-radius: 10px;
       box-shadow: 0 10px 30px rgba(0,0,0,.08);
-      background:#eee;
+      background: #eee;
     }
 
-    /* заставляем страницу «быть выше» для демонстрации прокрутки */
-    .spacer {
-      height: 1200px;         /* ← если нужно больше/меньше скролла — правьте */
-    }
+    /* Добавляем «высоту» для демонстрации скролла */
+    .spacer { height: 1400px; }
   </style>
 
   <script>
+    // Встроенный режим, только клиентская кнопка
     window.POKAZON_EMBED = true;
-    window.POKAZON_ONLY  = 'client';   // прячем кнопку оператора
+    window.POKAZON_ONLY  = 'client';
+
+    // Гарантируем #help
     if (location.hash !== '#help') {
       location.replace(location.pathname + '#help');
     }
   </script>
-  <script defer src="/src/oko-loader.js?v=embed3"></script>
+
+  <!-- Обход кэша: v=embed10 -->
+  <script defer src="/src/oko-loader.js?v=embed10"></script>
 </head>
 <body>
-
-  <!-- единый скролл -->
   <div class="demo-scroll">
     <div class="stage">
-      <img class="shot" src="/assets/screen2.jpg" alt="demo">
+      <!-- Единственный скрин; v=10, чтобы точно обойти кэш -->
+      <img class="shot" src="/assets/screen2.jpg?v=10" alt="demo">
       <div class="spacer"></div>
     </div>
   </div>
 
   <script>
-    /* подстраховка: удалить кнопку «ОКО Оператор» если вдруг появится */
+    /* Подстраховка: если внезапно появится кнопка оператора — убираем */
     (function nukeOperatorBtn(){
       function kill(){
         document.querySelectorAll('[data-oko="operator"],[data-oko-role="operator-toggle"],.oko-operator,#oko-operator')
@@ -77,7 +91,7 @@
       setTimeout(()=>{ try{mo.disconnect()}catch(e){} }, 2000);
     })();
 
-    /* прячем заголовок внутри модалки клиента */
+    /* Прячем заголовок внутри клиентской модалки, чтобы не дублировался */
     (function hideClientHeader(){
       function tryHide(){
         const modal = document.querySelector('[data-oko-help-modal], .oko-help-modal, .oko-modal');
@@ -91,6 +105,6 @@
     })();
   </script>
 
-  <script defer src="/mini/mini-compact.js?v=8"></script>
+  <script defer src="/mini/mini-compact.js?v=10"></script>
 </body>
 </html>
