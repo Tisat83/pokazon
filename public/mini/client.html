@@ -3,66 +3,53 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>mini client</title>
-
-  <!-- Мы встраиваемся в iframe, нужна только клиентская часть -->
+  <title>mini client • pokazon</title>
+  <style>
+    html,body{height:100%;margin:0}
+    .demo-scroll{
+      min-height:2200px;
+      background: url('/assets/screen2.jpg') center top / cover repeat-y;
+    }
+  </style>
   <script>
     window.POKAZON_EMBED = true;
     window.POKAZON_ONLY  = 'client';
     if (location.hash !== '#help') { location.replace(location.pathname + '#help'); }
   </script>
-
-  <!-- Лоадер (версию меняем для сброса кэша) -->
-  <script defer src="/src/oko-loader.js?v=embed8"></script>
-
-  <style>
-    /* ===== демо-фон и прокрутка ===== */
-    html, body {
-      height: 100%;
-    }
-    body {
-      margin: 0;
-      /* одна (!) картинка фоном: */
-      background-image: url('/assets/screen2.jpg');
-      background-repeat: no-repeat;
-      background-position: top center;
-      /* растягиваем ширину до фрейма, по высоте — пропорционально */
-      background-size: 100% auto;
-      /* делаем вертикальную прокрутку, чтобы можно было «проскроллить» фон */
-      overflow-y: auto;
-      /* немного «контента» ниже, чтобы появилась зона прокрутки */
-      padding-bottom: 1200px; /* можно подрегулировать, если нужно больше/меньше скролла */
-    }
-
-    /* кнопка «Подключить» (из виджета) должна быть поверх */
-    .oko-widget-button {
-      position: fixed !important;
-      right: 18px;
-      bottom: 18px;
-      z-index: 2147483000; /* выше всего */
-    }
-  </style>
-
-  <!-- Подстраховка: если вдруг где-то вылезет кнопка оператора — сносим её -->
-  <script>
-    (function () {
-      function nuke() {
-        document.querySelectorAll(
-          '[data-oko="operator"], [data-oko-role="operator-toggle"], ' +
-          '.oko-operator, #oko-operator, button, a'
-        ).forEach(function(el){
-          var t = (el.textContent||'').trim();
-          if (t === 'ОКО Оператор') el.remove();
-        });
-      }
-      nuke();
-      var mo = new MutationObserver(nuke);
-      mo.observe(document.documentElement, { childList:true, subtree:true });
-      setTimeout(function(){ try { mo.disconnect(); } catch(e){} }, 2000);
-    })();
-  </script>
+  <script defer src="/src/oko-loader.js?v=embed2"></script>
 </head>
 <body>
-  <!-- Никаких <img> с фоном не вставляем! Фон задаётся только CSS-ом выше. -->
+  <div class="demo-scroll"></div>
+
+  <script>
+    (function nukeOperatorBtn(){
+      function kill(){
+        document.querySelectorAll('[data-oko="operator"],[data-oko-role="operator-toggle"],.oko-operator,#oko-operator')
+          .forEach(el => el.remove());
+        Array.from(document.querySelectorAll('button,a,div')).forEach(el=>{
+          const t=(el.textContent||'').trim();
+          if (t==='ОКО Оператор') el.remove();
+        });
+      }
+      kill();
+      const mo=new MutationObserver(kill);
+      mo.observe(document.documentElement,{childList:true,subtree:true});
+      setTimeout(()=>{ try{mo.disconnect()}catch(e){} },2000);
+    })();
+
+    (function hideClientHeader(){
+      function tryHide(){
+        const modal = document.querySelector('[data-oko-help-modal], .oko-help-modal, .oko-modal');
+        if (!modal) return;
+        const head = modal.querySelector('h1,h2,h3,header,.oko-modal__title,strong');
+        if (head) head.style.display = 'none';
+      }
+      document.addEventListener('pokazon:want-help', ()=>setTimeout(tryHide, 300));
+      const mo=new MutationObserver(tryHide);
+      mo.observe(document.documentElement,{childList:true,subtree:true});
+    })();
+  </script>
+
+  <script defer src="/mini/mini-compact.js?v=5"></script>
 </body>
 </html>
