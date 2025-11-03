@@ -6,10 +6,12 @@
   <title>mini operator</title>
 
   <script>
+    // мини-страница встраивается во фрейм
     window.POKAZON_EMBED = true;
     if (location.hash !== '#operator') { location.replace(location.pathname + '#operator'); }
   </script>
-
+  
+  <!-- Грузим виджет/панель (loader уже умеет работать во фрейме) -->
   <script defer src="/src/oko-loader.js?v=embed9"></script>
 
   <style>
