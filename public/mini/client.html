@@ -52,41 +52,6 @@
   </style>
 </head>
 <body>
-
-  <!-- уменьшаем шаг прокрутки (колесо/клавиши) -->
-  <script>
-    (function () {
-      const FACTOR = 0.30;            // 30% от стандартного шага
-      const LINE_HEIGHT = 100;        // базовая высота линии для клавиш
-      function clamp(v, min, max){ return Math.max(min, Math.min(max, v)); }
-
-      function onWheel(e) {
-        e.preventDefault();
-        const delta = (e.deltaY || 0) * FACTOR;
-        window.scrollBy(0, delta);
-      }
-
-      function onKey(e) {
-        let dy = 0;
-        switch (e.key) {
-          case 'ArrowDown': dy = LINE_HEIGHT * FACTOR; break;
-          case 'ArrowUp':   dy = -LINE_HEIGHT * FACTOR; break;
-          case 'PageDown':  dy = window.innerHeight * FACTOR; break;
-          case 'PageUp':    dy = -window.innerHeight * FACTOR; break;
-          case 'Home':      window.scrollTo(0, 0); return;
-          case 'End':       window.scrollTo(0, document.body.scrollHeight); return;
-          default: return;
-        }
-        e.preventDefault();
-        window.scrollBy(0, dy);
-      }
-
-      window.addEventListener('wheel', onWheel, { passive:false });
-      window.addEventListener('keydown', onKey, { passive:false });
-    })();
-  </script>
-
-  <!-- мини-правки демо (если были) -->
   <script defer src="/mini/mini-compact.js?v=3"></script>
 </body>
 </html>
