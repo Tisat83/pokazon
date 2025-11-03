@@ -15,29 +15,14 @@
   <script defer src="/src/oko-loader.js?v=embed9"></script>
 
 <style>
-  /* Только body скроллит, html не скроллит — исключаем двойную полосу */
-  html {
-    margin: 0;
-    height: 100%;
-    overflow: hidden;          /* <-- было scroll */
-    background: #fff;
+  html{margin:0;height:100%;overflow:hidden;background:#fff;}
+  body{
+    margin:0;min-height:100%;overflow:auto;
+    background:#fff url('/assets/screen2.jpg') top center no-repeat;
+    background-size:100% auto;
+    padding-bottom: 600px; /* укоротили скролл */
   }
-  body {
-    margin: 0;
-    min-height: 100%;
-    overflow-y: auto;          /* <-- единственная полоса прокрутки */
-    background: #fff url('/assets/screen2.jpg') top center no-repeat;
-    background-size: 100% auto;
-    /* длина демо-прокрутки (регулируйте под свою картинку) */
-    padding-bottom: 1200px;
-  }
-
-  /* Кнопку оператора в клиентском мини-окне скрываем */
-  [data-oko="operator"],
-  [data-oko-role="operator-toggle"],
-  .oko-operator, #oko-operator { display: none !important; }
 </style>
-
 </head>
 <body>
 
