@@ -51,58 +51,50 @@
 </head>
 <body>
 
-  <script>
-    (function () {
-      // уменьшить шаг прокрутки, как на клиенте
-      const FACTOR = 0.30;
-      const LINE_HEIGHT = 100;
+<script>
+(function () {
+  // 1) как и у клиента — один скролл у body
+  const css = document.createElement('style');
+  css.textContent = `
+    html{margin:0;height:100%;overflow:hidden;background:#fff;}
+    body{
+      margin:0;min-height:100%;overflow:auto;background:#fff url('/assets/screen2.jpg') top center no-repeat;
+      background-size:100% auto;padding-bottom:1200px;
+    }
+    /* ужимаем панель: оставляем только поле кода + кнопку Войти */
+    .oko-panel .oko-screens,
+    .oko-panel .oko-row,
+    .oko-panel .oko-controls,
+    .oko-panel .oko-anchors,
+    .oko-panel .oko-toggles,
+    .oko-panel .oko-buttons,
+    .oko-panel .oko-actions,
+    .oko-panel .oko-meta,
+    .oko-panel .oko-log-btn,
+    .oko-panel .oko-meta-line { display:none !important; }
+    .oko-panel { max-width: 420px !important; }
+    .oko-panel .oko-header .oko-close { display: inline-flex !important; } /* крестик оставить */
+  `;
+  document.head.appendChild(css);
 
-      function onWheel(e){ e.preventDefault(); window.scrollBy(0,(e.deltaY||0)*FACTOR); }
-      function onKey(e){
-        let dy=0;
-        switch(e.key){
-          case 'ArrowDown': dy=LINE_HEIGHT*FACTOR; break;
-          case 'ArrowUp':   dy=-LINE_HEIGHT*FACTOR; break;
-          case 'PageDown':  dy=window.innerHeight*FACTOR; break;
-          case 'PageUp':    dy=-window.innerHeight*FACTOR; break;
-          case 'Home': window.scrollTo(0,0); return;
-          case 'End':  window.scrollTo(0,document.body.scrollHeight); return;
-          default: return;
-        }
-        e.preventDefault(); window.scrollBy(0,dy);
-      }
-      window.addEventListener('wheel', onWheel, {passive:false});
-      window.addEventListener('keydown', onKey, {passive:false});
+  // 2) страховочная функция: если что-то «вернулось» — снова скрыть
+  function shrink() {
+    const root = document.querySelector('.oko-panel');
+    if (!root) return;
+    root.style.maxWidth = '420px';
+    root.querySelectorAll(`
+      .oko-screens,.oko-row,.oko-controls,.oko-anchors,.oko-toggles,
+      .oko-buttons,.oko-actions,.oko-meta,.oko-log-btn,.oko-meta-line
+    `).forEach(el => el && (el.style.display = 'none'));
+    const close = root.querySelector('.oko-header .oko-close');
+    if (close) close.style.display = 'inline-flex';
+  }
+  document.addEventListener('DOMContentLoaded', shrink);
+  setTimeout(shrink, 400);
+  setTimeout(shrink, 1000);
+})();
+</script>
 
-      // страховочная «урезалка» панели после инициализации
-      function shrink() {
-        try {
-          const root = document.querySelector('.oko-panel');
-          if (!root) return;
-          // Скрыть всё «лишнее»
-          root.querySelectorAll(`
-            .oko-row,
-            .oko-controls,
-            .oko-meta,
-            .oko-anchors,
-            .oko-toggles,
-            .oko-buttons,
-            .oko-actions,
-            .oko-log-btn,
-            .oko-meta-line,
-            .oko-screens
-          `).forEach(el => el && (el.style.display='none'));
-          // Показать крестик
-          const close = root.querySelector('.oko-header .oko-close');
-          if (close) close.style.display = 'inline-flex';
-          root.style.maxWidth = '420px';
-        } catch(e){}
-      }
-      document.addEventListener('DOMContentLoaded', shrink);
-      setTimeout(shrink, 600);
-      setTimeout(shrink, 1200);
-    })();
-  </script>
 
 </body>
 </html>
