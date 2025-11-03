@@ -5,152 +5,104 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>mini operator</title>
 
-  <!-- Мы в iframe, нужна только панель оператора -->
   <script>
     window.POKAZON_EMBED = true;
-    window.POKAZON_ONLY  = 'operator';
     if (location.hash !== '#operator') { location.replace(location.pathname + '#operator'); }
   </script>
 
-  <!-- Лоадер (версию меняем для сброса кэша) -->
-  <script defer src="/src/oko-loader.js?v=embed8"></script>
+  <script defer src="/src/oko-loader.js?v=embed9"></script>
 
   <style>
-    /* ===== тот же демо-фон и прокрутка, что и у клиента ===== */
-    html, body { height: 100%; }
-    body{
-      margin:0;
+    html, body {
+      margin: 0;
+      height: 100%;
+      overflow-y: scroll;
+      background: #fff;
+    }
+    body {
       background-image: url('/assets/screen2.jpg');
       background-repeat: no-repeat;
       background-position: top center;
       background-size: 100% auto;
-      overflow-y: auto;
-      padding-bottom: 1200px; /* чтобы был заметный скролл */
+      padding-bottom: 1200px; /* длина полосы прокрутки */
     }
 
-    /* компактный вид панели */
-    html.oko-mini-compact .oko-panel { max-width: 420px !important; }
-    .oko-mini-collapsed .oko-mini-body { display: none !important; }
+    /* Урезаем панель — оставляем только поле кода и «Войти» */
+    .oko-panel .oko-row,
+    .oko-panel .oko-controls,
+    .oko-panel .oko-meta,
+    .oko-panel .oko-anchors,
+    .oko-panel .oko-toggles,
+    .oko-panel .oko-buttons,
+    .oko-panel .oko-actions,
+    .oko-panel .oko-log-btn,
+    .oko-panel .oko-meta-line { display: none !important; }
 
-    /* на всякий случай прячем «Лог» */
-    .oko-hide-log [data-oko-log],
-    .oko-hide-log .oko-log,
-    .oko-hide-log button.oko-log,
-    .oko-hide-log a.oko-log { display: none !important; }
+    /* Шапка: крестик справа, без кнопки «Лог» */
+    .oko-panel .oko-header .oko-close { display: inline-flex !important; }
+    .oko-panel .oko-header .oko-log-btn { display: none !important; }
 
-    /* сама панель — фиксируем у нижнего правого края, чтобы не закрывала фон */
-    .oko-panel{
-      position: fixed !important;
-      right: 18px; bottom: 18px;
-      z-index: 2147483001; /* выше кнопок */
-    }
+    /* Строки «Экран клиента / Твой экран» скрыть */
+    .oko-panel .oko-screens { display: none !important; }
+
+    /* Немного сузим саму панель */
+    .oko-panel { max-width: 420px !important; }
   </style>
 </head>
 <body>
 
-<script>
-/* Урезаем панель: оставляем только поле кода + «Войти».
-   Экран клиента/Твой экран/Подогнать/Автоподгон/Сброс/якоря/стрелки/лог — скрываем. */
-(function () {
-  const DEADLINE = Date.now() + 10000;
-  function norm(s){ return (s||'').toLowerCase().replace(/\s+/g,' ').trim(); }
-  function text(el){ return norm(el.textContent); }
+  <script>
+    (function () {
+      // уменьшить шаг прокрутки, как на клиенте
+      const FACTOR = 0.30;
+      const LINE_HEIGHT = 100;
 
-  function shrink() {
-    const panel = Array.from(document.querySelectorAll('div,section,aside'))
-      .find(n => /панель оператора/i.test((n.textContent||'')));
-    if (!panel) { if (Date.now() < DEADLINE) requestAnimationFrame(shrink); return; }
-
-    document.documentElement.classList.add('oko-mini-compact','oko-hide-log');
-
-    // Шапка панели — показываем «крестик» справа
-    const header = Array.from(panel.querySelectorAll('div,header,h1,h2,h3'))
-      .find(h => /панель оператора/i.test((h.textContent||''))) || panel;
-    const closeBtn = header.querySelector('button, a, .close, .oko-close') ||
-                     panel.querySelector('button[aria-label="Close"], [data-oko-close]');
-    if (closeBtn) {
-      closeBtn.style.display = '';
-      closeBtn.style.marginLeft = 'auto';
-    }
-
-    // Тело
-    let body = panel.querySelector('.oko-mini-body');
-    if (!body) {
-      body = document.createElement('div');
-      body.className = 'oko-mini-body';
-      Array.from(panel.children).forEach(ch => { if (ch!==header) body.appendChild(ch); });
-      panel.appendChild(body);
-    }
-
-    // Поле кода и кнопка «Войти»
-    const codeInput = Array.from(panel.querySelectorAll('input,textarea'))
-      .find(el => /код/.test(norm(el.placeholder)));
-    const joinBtn = Array.from(panel.querySelectorAll('button, a'))
-      .find(el => text(el)==='войти');
-
-    if (!codeInput || !joinBtn) {
-      if (Date.now() < DEADLINE) requestAnimationFrame(shrink);
-      return;
-    }
-
-    // Список того, что скрываем
-    const hideContains = [
-      'только указка','синхронная прокрутка','подогнать','автоподгон','сброс',
-      'окно wxh','окно w×h','якорь','перейти','pgup','pgdn','top','bottom','лог',
-      'экран клиента','твой экран'
-    ];
-
-    Array.from(body.querySelectorAll('*')).forEach(el => {
-      const keep = el===codeInput || el===joinBtn ||
-                   (el.contains && (el.contains(codeInput)||el.contains(joinBtn)));
-      if (keep) return;
-      const t = text(el);
-      if (hideContains.some(key => t.includes(key))) {
-        el.style.display = 'none';
-        el.setAttribute('data-mini-hidden','1');
+      function onWheel(e){ e.preventDefault(); window.scrollBy(0,(e.deltaY||0)*FACTOR); }
+      function onKey(e){
+        let dy=0;
+        switch(e.key){
+          case 'ArrowDown': dy=LINE_HEIGHT*FACTOR; break;
+          case 'ArrowUp':   dy=-LINE_HEIGHT*FACTOR; break;
+          case 'PageDown':  dy=window.innerHeight*FACTOR; break;
+          case 'PageUp':    dy=-window.innerHeight*FACTOR; break;
+          case 'Home': window.scrollTo(0,0); return;
+          case 'End':  window.scrollTo(0,document.body.scrollHeight); return;
+          default: return;
+        }
+        e.preventDefault(); window.scrollBy(0,dy);
       }
-    });
+      window.addEventListener('wheel', onWheel, {passive:false});
+      window.addEventListener('keydown', onKey, {passive:false});
 
-    // Перерисовки — повторяем урезание
-    const mo = new MutationObserver(() => shrink());
-    mo.observe(panel, { childList:true, subtree:true });
-  }
-
-  window.addEventListener('load', shrink);
-  setTimeout(shrink, 400);
-  setTimeout(shrink, 1000);
-  setTimeout(shrink, 2000);
-})();
-</script>
-<script>
-/** уменьшение шага прокрутки в мини-демо (картинка) */
-(function () {
-  // 0.3 = 30% от системного шага; сделайте 0.2–0.35 как вам удобно
-  const FACTOR = 0.30;
-
-  // что крутим: либо спец-обёртка, либо сам документ
-  const scroller =
-    document.querySelector('.demo-scroll, .scroll, .frame, .page') ||
-    document.scrollingElement || document.documentElement;
-
-  // колесо
-  function onWheel(e) {
-    if (e.ctrlKey) return;           // не мешаем zoom по Ctrl+колесо
-    e.preventDefault();              // берём прокрутку на себя
-    scroller.scrollTop += e.deltaY * FACTOR;
-  }
-  window.addEventListener('wheel', onWheel, { passive: false });
-
-  // PgUp / PgDn / стрелки (опционально)
-  window.addEventListener('keydown', function (e) {
-    const h = window.innerHeight;
-    if (e.key === 'PageDown') { e.preventDefault(); scroller.scrollTop += h * FACTOR; }
-    if (e.key === 'PageUp')   { e.preventDefault(); scroller.scrollTop -= h * FACTOR; }
-    if (e.key === 'ArrowDown'){ e.preventDefault(); scroller.scrollTop += 60 * FACTOR; }
-    if (e.key === 'ArrowUp')  { e.preventDefault(); scroller.scrollTop -= 60 * FACTOR; }
-  });
-})();
-</script>
+      // страховочная «урезалка» панели после инициализации
+      function shrink() {
+        try {
+          const root = document.querySelector('.oko-panel');
+          if (!root) return;
+          // Скрыть всё «лишнее»
+          root.querySelectorAll(`
+            .oko-row,
+            .oko-controls,
+            .oko-meta,
+            .oko-anchors,
+            .oko-toggles,
+            .oko-buttons,
+            .oko-actions,
+            .oko-log-btn,
+            .oko-meta-line,
+            .oko-screens
+          `).forEach(el => el && (el.style.display='none'));
+          // Показать крестик
+          const close = root.querySelector('.oko-header .oko-close');
+          if (close) close.style.display = 'inline-flex';
+          root.style.maxWidth = '420px';
+        } catch(e){}
+      }
+      document.addEventListener('DOMContentLoaded', shrink);
+      setTimeout(shrink, 600);
+      setTimeout(shrink, 1200);
+    })();
+  </script>
 
 </body>
 </html>

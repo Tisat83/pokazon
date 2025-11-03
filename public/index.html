@@ -4,12 +4,24 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Помощь на странице · pokazon.ru</title>
-  <link rel="stylesheet" href="/assets/home.css">
+  <link rel="stylesheet" href="/assets/home.css?v=11">
+  <style>
+    .wrap{max-width:1200px;margin:0 auto;padding:24px}
+    .actions{display:flex;gap:12px;margin:12px 0 20px}
+    .btn{display:inline-block;padding:10px 16px;border-radius:10px;text-decoration:none}
+    .primary{background:#10b981;color:#fff}
+    .secondary{background:#eef2f7;color:#111}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:28px}
+    .panel{background:#fff;border-radius:16px;box-shadow:0 8px 20px rgba(0,0,0,.06);padding:16px}
+    .frame-box{border:1px solid #eceff3;border-radius:12px;overflow:hidden}
+    .frame-box iframe{display:block;width:100%;height:540px;border:0}
+    @media (max-width:1000px){.grid{grid-template-columns:1fr}}
+  </style>
 </head>
 <body>
   <div class="wrap">
     <h1>Помощь на странице · <b>pokazon.ru</b></h1>
-    <p class="lead">Подключайте онлайн‑консультанта к странице клиента по одноразовому коду. Безопасно: доступ только к текущей странице. Кнопка «Остановить» всегда под рукой.</p>
+    <p class="lead">Подключайте онлайн-консультанта к странице клиента по одноразовому коду. Безопасно: доступ только к текущей странице. Кнопка «Остановить» всегда под рукой.</p>
 
     <div class="actions">
       <a class="btn primary" href="/demo/">Попробовать демо</a>
@@ -18,13 +30,15 @@
 
     <div class="grid">
       <div class="panel">
-        <h3>Клиент — мини‑окно (#help)</h3>
+        <h3>Клиент — мини-окно (#help)</h3>
         <div class="frame-box">
+          <!-- кэш-брейк, чтоб изменения мини-страницы сразу подхватывались -->
           <iframe src="/mini/client.html?v=11#help" title="client-mini"></iframe>
         </div>
       </div>
+
       <div class="panel">
-        <h3>Оператор — мини‑окно (#operator)</h3>
+        <h3>Оператор — мини-окно (#operator)</h3>
         <div class="frame-box">
           <iframe src="/mini/operator.html?v=11#operator" title="operator-mini"></iframe>
         </div>
