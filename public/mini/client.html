@@ -17,7 +17,7 @@
   <style>
     html, body {
       margin: 0;
-      height: 100%;
+      height: 90%;
       overflow-y: scroll;
       background: #fff;
     }
@@ -25,30 +25,9 @@
       background-image: url('/assets/screen2.jpg');
       background-repeat: no-repeat;
       background-position: top center;
-      background-size: 90% auto;
+      background-size: 100% auto;
       padding-bottom: 600px; /* длина полосы прокрутки */
     }
-
-    /* Урезаем панель — оставляем только поле кода и «Войти» */
-    .oko-panel .oko-row,
-    .oko-panel .oko-controls,
-    .oko-panel .oko-meta,
-    .oko-panel .oko-anchors,
-    .oko-panel .oko-toggles,
-    .oko-panel .oko-buttons,
-    .oko-panel .oko-actions,
-    .oko-panel .oko-log-btn,
-    .oko-panel .oko-meta-line { display: none !important; }
-
-    /* Шапка: крестик справа, без кнопки «Лог» */
-    .oko-panel .oko-header .oko-close { display: inline-flex !important; }
-    .oko-panel .oko-header .oko-log-btn { display: none !important; }
-
-    /* Строки «Экран клиента / Твой экран» скрыть */
-    .oko-panel .oko-screens { display: none !important; }
-
-    /* Немного сузим саму панель */
-    .oko-panel { max-width: 420px !important; }
   </style>
 </head>
 <body>
