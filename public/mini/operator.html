@@ -122,6 +122,35 @@
   setTimeout(shrink, 2000);
 })();
 </script>
+<script>
+/** уменьшение шага прокрутки в мини-демо (картинка) */
+(function () {
+  // 0.3 = 30% от системного шага; сделайте 0.2–0.35 как вам удобно
+  const FACTOR = 0.30;
+
+  // что крутим: либо спец-обёртка, либо сам документ
+  const scroller =
+    document.querySelector('.demo-scroll, .scroll, .frame, .page') ||
+    document.scrollingElement || document.documentElement;
+
+  // колесо
+  function onWheel(e) {
+    if (e.ctrlKey) return;           // не мешаем zoom по Ctrl+колесо
+    e.preventDefault();              // берём прокрутку на себя
+    scroller.scrollTop += e.deltaY * FACTOR;
+  }
+  window.addEventListener('wheel', onWheel, { passive: false });
+
+  // PgUp / PgDn / стрелки (опционально)
+  window.addEventListener('keydown', function (e) {
+    const h = window.innerHeight;
+    if (e.key === 'PageDown') { e.preventDefault(); scroller.scrollTop += h * FACTOR; }
+    if (e.key === 'PageUp')   { e.preventDefault(); scroller.scrollTop -= h * FACTOR; }
+    if (e.key === 'ArrowDown'){ e.preventDefault(); scroller.scrollTop += 60 * FACTOR; }
+    if (e.key === 'ArrowUp')  { e.preventDefault(); scroller.scrollTop -= 60 * FACTOR; }
+  });
+})();
+</script>
 
 </body>
 </html>
