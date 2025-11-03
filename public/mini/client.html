@@ -3,75 +3,66 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>mini client • pokazon</title>
-  <style>
-    /* Общий сброс и запрет фоновых картинок */
-    html, body { height:100%; margin:0; overflow:hidden; background:#f6f7f9; }
-    html, body, .demo-scroll, .stage, .shot { background-image:none !important; }
+  <title>mini client</title>
 
-    /* Скроллим ВНУТРИ iframe */
-    .demo-scroll{ position:fixed; inset:0; overflow:auto; -webkit-overflow-scrolling:touch; }
-
-    /* Контент без max-width: занимает весь фрейм */
-    .stage{ box-sizing:border-box; padding:12px; }
-
-    /* Картинка – ровно во всю ширину контейнера */
-    .shot{
-      display:block; width:100%; height:auto;
-      border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,.08); background:#eee;
-    }
-
-    /* Чтобы был вертикальный скролл (картинка уедет ниже сгиба ~на пол-экрана) */
-    .spacer{ height: 60vh; }
-  </style>
-
+  <!-- Мы встраиваемся в iframe, нужна только клиентская часть -->
   <script>
-    // Встроенный режим: только клиент
     window.POKAZON_EMBED = true;
     window.POKAZON_ONLY  = 'client';
-    if (location.hash !== '#help') location.replace(location.pathname + '#help');
+    if (location.hash !== '#help') { location.replace(location.pathname + '#help'); }
   </script>
 
-  <!-- кэш-бастер -->
-  <script defer src="/src/oko-loader.js?v=embed11"></script>
-</head>
-<body>
-  <div class="demo-scroll">
-    <div class="stage">
-      <img class="shot" src="/assets/screen2.jpg?v=11" alt="demo">
-      <div class="spacer"></div>
-    </div>
-  </div>
+  <!-- Лоадер (версию меняем для сброса кэша) -->
+  <script defer src="/src/oko-loader.js?v=embed8"></script>
 
+  <style>
+    /* ===== демо-фон и прокрутка ===== */
+    html, body {
+      height: 100%;
+    }
+    body {
+      margin: 0;
+      /* одна (!) картинка фоном: */
+      background-image: url('/assets/screen2.jpg');
+      background-repeat: no-repeat;
+      background-position: top center;
+      /* растягиваем ширину до фрейма, по высоте — пропорционально */
+      background-size: 100% auto;
+      /* делаем вертикальную прокрутку, чтобы можно было «проскроллить» фон */
+      overflow-y: auto;
+      /* немного «контента» ниже, чтобы появилась зона прокрутки */
+      padding-bottom: 1200px; /* можно подрегулировать, если нужно больше/меньше скролла */
+    }
+
+    /* кнопка «Подключить» (из виджета) должна быть поверх */
+    .oko-widget-button {
+      position: fixed !important;
+      right: 18px;
+      bottom: 18px;
+      z-index: 2147483000; /* выше всего */
+    }
+  </style>
+
+  <!-- Подстраховка: если вдруг где-то вылезет кнопка оператора — сносим её -->
   <script>
-    /* На всякий: убираем кнопку оператора */
-    (function nukeOperatorBtn(){
-      function kill(){
-        document.querySelectorAll('[data-oko="operator"],[data-oko-role="operator-toggle"],.oko-operator,#oko-operator')
-          .forEach(el=>el.remove());
-        document.querySelectorAll('button,a,div').forEach(el=>{
-          const t=(el.textContent||'').trim(); if(t==='ОКО Оператор') el.remove();
+    (function () {
+      function nuke() {
+        document.querySelectorAll(
+          '[data-oko="operator"], [data-oko-role="operator-toggle"], ' +
+          '.oko-operator, #oko-operator, button, a'
+        ).forEach(function(el){
+          var t = (el.textContent||'').trim();
+          if (t === 'ОКО Оператор') el.remove();
         });
       }
-      kill(); const mo=new MutationObserver(kill);
-      mo.observe(document.documentElement,{childList:true,subtree:true});
-      setTimeout(()=>{ try{mo.disconnect()}catch(e){} }, 2000);
-    })();
-
-    /* Не показываем заголовок внутри клиентской модалки */
-    (function hideClientHeader(){
-      function tryHide(){
-        const m=document.querySelector('[data-oko-help-modal], .oko-help-modal, .oko-modal');
-        if (!m) return;
-        const h=m.querySelector('h1,h2,h3,header,.oko-modal__title,strong');
-        if (h) h.style.display='none';
-      }
-      document.addEventListener('pokazon:want-help',()=>setTimeout(tryHide,300));
-      const mo=new MutationObserver(tryHide);
-      mo.observe(document.documentElement,{childList:true,subtree:true});
+      nuke();
+      var mo = new MutationObserver(nuke);
+      mo.observe(document.documentElement, { childList:true, subtree:true });
+      setTimeout(function(){ try { mo.disconnect(); } catch(e){} }, 2000);
     })();
   </script>
-
-  <script defer src="/mini/mini-compact.js?v=11"></script>
+</head>
+<body>
+  <!-- Никаких <img> с фоном не вставляем! Фон задаётся только CSS-ом выше. -->
 </body>
 </html>
