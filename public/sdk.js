@@ -1,3 +1,39 @@
+
+// === Pokazon: force Socket.IO origin/path for CDN embedding ===
+(function(){
+  function patch(){
+    if (typeof window === 'undefined' || !window.io) return;
+    var _io = window.io;
+    var ORIGIN = (window.POKAZON_SOCKET_ORIGIN || 'https://pokazon.ru');
+    var PATH   = (window.POKAZON_SOCKET_PATH   || '/socket.io/');
+    if (_io && !_io.__pokazon_patched) {
+      var patched = function(url, opts){
+        if (typeof url === 'object' || url == null) {
+          opts = url || {};
+          url = ORIGIN;
+        }
+        if (typeof url === 'string' && !/^https?:\/\//i.test(url)) {
+          url = ORIGIN;
+        }
+        opts = opts || {};
+        if (!opts.path) opts.path = PATH;
+        if (!opts.transports) opts.transports = ['websocket','polling'];
+        if (typeof opts.withCredentials === 'undefined') opts.withCredentials = false;
+        return _io(url, opts);
+      };
+      patched.__pokazon_patched = true;
+      for (var k in _io) { try { patched[k] = _io[k]; } catch(e){} }
+      window.io = patched;
+    }
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', patch);
+  } else {
+    try { patch(); } catch(e){}
+  }
+})();
+// === /Pokazon patch ===
+
 /*! OKO SDK v14.1 — binds socket to session code on oko:set-code */
 (function(){
   const SIO="https://cdn.socket.io/4.7.5/socket.io.min.js";

@@ -54,7 +54,7 @@
         const modal=document.createElement('div'); modal.className='oko-modal';
         modal.innerHTML=`
           <div class="oko-card">
-            <div class="oko-title">Помощь от Мособои</div>
+            <div class="oko-title">Помощь от Pokazon</div>
             <div class="oko-muted">Продиктуйте код сотруднику или отправьте код:</div>
             <div class="oko-code" id="oko-code">••••••</div>
             <div class="oko-muted">Нажмите на код, чтобы скопировать его.</div>
@@ -97,3 +97,91 @@
     }catch(e){ console.error('[OKO widget v6.7]', e); }
   });
 })();
+
+// === Pokazon: click-to-copy for one-time code ===
+(function(){
+  function getCode(el){
+    if(!el) return '';
+    var a = el.getAttribute && (el.getAttribute('data-oko-code') || el.getAttribute('data-code'));
+    var t = (el.textContent || '').trim();
+    var v = (a || t || '').replace(/\s+/g,'');
+    return v;
+  }
+  function markClickable(el){
+    try { el.style.cursor = 'pointer'; el.title = 'Нажмите, чтобы скопировать код'; } catch(e){}
+  }
+  try {
+    document.querySelectorAll('.oko-code,[data-oko-code],[data-code]').forEach(markClickable);
+  } catch(e){}
+  document.addEventListener('click', function(ev){
+    var el = ev.target && (ev.target.closest && ev.target.closest('.oko-code,[data-oko-code],[data-code]') || null);
+    if(!el) return;
+    var code = getCode(el);
+    if(!code) return;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(code).then(function(){
+        try {
+          var prev = el.textContent;
+          el.textContent = 'Скопировано: ' + code;
+          setTimeout(function(){ el.textContent = prev; }, 1200);
+        } catch(e){}
+      }).catch(function(e){ console.warn('Clipboard copy failed', e); });
+    }
+  }, true);
+})();
+// === /Pokazon: click-to-copy ===
+
+
+// === Pokazon: add small copy icon next to the code ===
+(function(){
+  function ensureIconFor(el){
+    if(!el) return;
+    if (el.__pokazon_copy_icon) return; // already added
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.setAttribute('aria-label','Скопировать код');
+    btn.title = 'Скопировать код';
+    btn.className = 'pokazon-copy-btn';
+    btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+    // basic inline style (doesn't depend on global CSS)
+    btn.style.marginLeft = '8px';
+    btn.style.verticalAlign = 'middle';
+    btn.style.border = '1px solid rgba(0,0,0,0.1)';
+    btn.style.background = 'white';
+    btn.style.borderRadius = '6px';
+    btn.style.padding = '4px 6px';
+    btn.style.cursor = 'pointer';
+    btn.style.lineHeight = '0';
+    btn.style.display = 'inline-flex';
+    btn.style.alignItems = 'center';
+    btn.style.justifyContent = 'center';
+    btn.style.color = '#222';
+    btn.addEventListener('click', function(ev){
+      ev.preventDefault();
+      ev.stopPropagation();
+      var text = (el.getAttribute('data-oko-code') || el.getAttribute('data-code') || el.textContent || '').trim();
+      text = text.replace(/\s+/g, '');
+      if (!text) return;
+      if (navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(function(){
+          var old = btn.innerHTML;
+          btn.innerHTML = '✓';
+          setTimeout(function(){ btn.innerHTML = old; }, 900);
+        }).catch(function(e){ console.warn('Clipboard copy failed', e); });
+      }
+    }, true);
+    el.insertAdjacentElement('afterend', btn);
+    el.__pokazon_copy_icon = btn;
+  }
+  function scan(){
+    try {
+      document.querySelectorAll('.oko-code,[data-oko-code],[data-code]').forEach(ensureIconFor);
+    } catch(e){}
+  }
+  scan();
+  var mo = new MutationObserver(scan);
+  mo.observe(document.documentElement, {childList:true, subtree:true});
+  // optional: stop after 5s to not observe forever
+  setTimeout(function(){ try{mo.disconnect();}catch(e){} }, 5000);
+})();
+// === /Pokazon: copy icon ===
